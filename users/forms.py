@@ -3,6 +3,7 @@ from django import forms
 class CustomSignupForm(forms.Form):
     """
     Extra fields appended to allauth's base signup via ACCOUNT_SIGNUP_FORM_CLASS.
+    This form defines the extra fields and a `signup` method to save them.
     """
     first_name = forms.CharField(max_length=30, label='First Name',
                                  widget=forms.TextInput(attrs={'placeholder': 'First Name', 'class': 'form-control'}))
@@ -18,13 +19,11 @@ class CustomSignupForm(forms.Form):
                                    widget=forms.TextInput(attrs={'placeholder': 'Phone Number', 'class': 'form-control'}),
                                    required=False)
 
-    field_order = [
-        'username', 'email', 'first_name', 'last_name',
-        'date_of_birth', 'address', 'phone_number',
-        'password1', 'password2',
-    ]
-
     def signup(self, request, user):
+        """
+        This method is called by allauth after the user is created, to save
+        the extra data.
+        """
         user.first_name = self.cleaned_data.get('first_name', user.first_name)
         user.last_name = self.cleaned_data.get('last_name', user.last_name)
         user.date_of_birth = self.cleaned_data.get('date_of_birth')
@@ -38,25 +37,3 @@ class CustomSignupForm(forms.Form):
         'date_of_birth', 'address', 'phone_number',
         'password1', 'password2',
     ]
-
-    def signup(self, request, user):
-        # Persist extra fields to the user model
-        user.first_name = self.cleaned_data.get('first_name', user.first_name)
-        user.last_name = self.cleaned_data.get('last_name', user.last_name)
-        user.date_of_birth = self.cleaned_data.get('date_of_birth')
-        user.address = self.cleaned_data.get('address', '')
-        user.phone_number = self.cleaned_data.get('phone_number', '')
-        user.save()
-        return user
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        logger.debug("[CustomSignupForm] Initialized with data keys: %s", list(self.data.keys()))
-
-    def clean_phone_number(self):
-        pn = self.cleaned_data.get('phone_number')
-        if pn and len(pn) > 0:
-            pn_clean = pn.strip()
-            logger.debug("[CustomSignupForm] Cleaned phone number from '%s' to '%s'", pn, pn_clean)
-            return pn_clean
-        return pn

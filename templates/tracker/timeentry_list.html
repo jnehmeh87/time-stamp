@@ -63,17 +63,18 @@
                     <tr class="{% if entry.is_archived %}table-secondary text-muted{% endif %}">
                         <td><a href="{% url 'tracker:entry_update' entry.pk %}">{{ entry.title }}</a></td>
                         <td>{{ entry.project.name|default:"-" }}</td>
-                        <td>{{ entry.start_time|date:"Y-m-d H:i" }}</td>
-                        <td>{{ entry.end_time|date:"Y-m-d H:i" }}</td>
+                        <td data-utc-date="{{ entry.start_time.isoformat }}">{{ entry.start_time|date:"Y-m-d H:i" }}</td>
+                        <td data-utc-date="{{ entry.end_time.isoformat }}">{{ entry.end_time|date:"Y-m-d H:i" }}</td>
                         <td>{{ entry.duration|human_duration }}</td>
                         <td>{{ entry.get_category_display }}</td>
                         <td>
-                            <form action="{% url 'tracker:entry_toggle_archive' entry.pk %}" method="post" class="d-inline">
+                            <form action="{% url 'tracker:entry_toggle_archive' entry.pk %}" method="post" class="d-inline" data-confirm-message="Are you sure you want to {% if entry.is_archived %}unarchive{% else %}archive{% endif %} this entry?">
                                 {% csrf_token %}
                                 <button type="submit" class="btn btn-sm {% if entry.is_archived %}btn-outline-secondary{% else %}btn-outline-warning{% endif %}">
                                     {% if entry.is_archived %}Unarchive{% else %}Archive{% endif %}
                                 </button>
                             </form>
+                            <a href="{% url 'tracker:entry_delete' entry.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
                         </td>
                     </tr>
                     {% empty %}

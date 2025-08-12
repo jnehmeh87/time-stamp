@@ -4,9 +4,14 @@ from django.core.exceptions import ValidationError
 from datetime import timedelta
 
 class Project(models.Model):
+    CATEGORY_CHOICES = [
+        ('work', 'Work'),
+        ('personal', 'Personal'),
+    ]
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='projects')
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
+    category = models.CharField(max_length=10, choices=CATEGORY_CHOICES, default='work')
 
     class Meta:
         verbose_name = "Project"

@@ -9,7 +9,8 @@
             <div class="card-body p-4">
                 <h2 class="card-title mb-3">Time Tracker</h2>
                 {% if active_entry %}
-                    <p class="lead">Timer is running...</p>
+                    <p class="lead">Timer is running for: <strong>{{ active_entry.title }}</strong></p>
+                    <p class="text-muted">Project: {{ active_entry.project.name|default:"None" }} | Category: {{ active_entry.get_category_display }}</p>
                     <h1 id="timer" class="display-4 my-3" data-starttime="{{ active_entry.start_time.isoformat }}">00:00:00</h1>
                     <form action="{% url 'tracker:stop_timer' %}" method="post">
                         {% csrf_token %}
@@ -19,9 +20,70 @@
                     <p class="lead">Start a new time entry.</p>
                     <form action="{% url 'tracker:start_timer' %}" method="post">
                         {% csrf_token %}
+                        <div class="mb-3">
+                            <input type="text" name="title" class="form-control" placeholder="What are you working on?" required>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="project" class="form-label">Project</label>
+                                <select name="project" id="project" class="form-select">
+                                    <option value="">No Project</option>
+                                    {% for project in projects %}
+                                    <option value="{{ project.pk }}">{{ project.name }}</option>
+                                    {% endfor %}
+                                    <option value="add_new_project">-- Add New Project --</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Category</label>
+                                <div class="d-flex">
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="category" id="category_work" value="work" checked>
+                                        <label class="form-check-label" for="category_work">Work</label>
+                                    </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="category" id="category_personal" value="personal">
+                                        <label class="form-check-label" for="category_personal">Personal</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                         <button type="submit" class="btn btn-success btn-lg w-100">Start Timer</button>
                     </form>
                 {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Project Modal -->
+    <div class="modal fade" id="addProjectModal" tabindex="-1" aria-labelledby="addProjectModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addProjectModalLabel">Add New Project</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addProjectForm">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="new_project_name" class="form-label">Project Name</label>
+                            <input type="text" class="form-control" id="new_project_name" name="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="new_project_category" class="form-label">Category</label>
+                            <select class="form-select" id="new_project_category" name="category">
+                                <option value="work" selected>Work</option>
+                                <option value="personal">Personal</option>
+                            </select>
+                        </div>
+                        <div id="modal-alert" class="alert alert-danger d-none" role="alert"></div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="saveProjectBtn">Save Project</button>
+                </div>
             </div>
         </div>
     </div>
@@ -30,24 +92,67 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const timerElement = document.getElementById('timer');
-            const startTime = new Date(timerElement.dataset.starttime);
+            if (timerElement) {
+                const startTime = new Date(timerElement.dataset.starttime);
 
-            function updateTimer() {
-                const now = new Date();
-                const difference = now - startTime;
+                function updateTimer() {
+                    const now = new Date();
+                    const difference = now - startTime;
 
-                const hours = String(Math.floor(difference / 3600000)).padStart(2, '0');
-                const minutes = String(Math.floor((difference % 3600000) / 60000)).padStart(2, '0');
-                const seconds = String(Math.floor((difference % 60000) / 1000)).padStart(2, '0');
+                    const hours = String(Math.floor(difference / 3600000)).padStart(2, '0');
+                    const minutes = String(Math.floor((difference % 3600000) / 60000)).padStart(2, '0');
+                    const seconds = String(Math.floor((difference % 60000) / 1000)).padStart(2, '0');
 
-                timerElement.textContent = `${hours}:${minutes}:${seconds}`;
+                    timerElement.textContent = `${hours}:${minutes}:${seconds}`;
+                }
+
+                setInterval(updateTimer, 1000);
+                updateTimer(); // Initial call to display timer immediately
             }
-
-            setInterval(updateTimer, 1000);
-            updateTimer(); // Initial call to display timer immediately
         });
     </script>
     {% endif %}
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const projectSelect = document.getElementById('project');
+            const addProjectModal = new bootstrap.Modal(document.getElementById('addProjectModal'));
+            const saveProjectBtn = document.getElementById('saveProjectBtn');
+            const addProjectForm = document.getElementById('addProjectForm');
+            const modalAlert = document.getElementById('modal-alert');
+
+            projectSelect.addEventListener('change', function() {
+                if (this.value === 'add_new_project') {
+                    addProjectModal.show();
+                    this.value = ''; // Reset select
+                }
+            });
+
+            saveProjectBtn.addEventListener('click', function() {
+                const formData = new FormData(addProjectForm);
+                fetch("{% url 'tracker:project_add_ajax' %}", {
+                    method: 'POST',
+                    body: new URLSearchParams(formData),
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const newOption = new Option(data.name, data.id, false, true);
+                        projectSelect.insertBefore(newOption, projectSelect.options[projectSelect.options.length - 1]);
+                        addProjectModal.hide();
+                        addProjectForm.reset();
+                        modalAlert.classList.add('d-none');
+                    } else {
+                        modalAlert.textContent = data.error || 'Could not save project.';
+                        modalAlert.classList.remove('d-none');
+                    }
+                });
+            });
+        });
+    </script>
 
 {% else %}
     {# This block is for unauthenticated users, as before. #}

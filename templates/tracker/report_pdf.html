@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Time Report</title>
+    <style>
+        body { font-family: sans-serif; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #dddddd; text-align: left; padding: 8px; }
+        th { background-color: #f2f2f2; }
+        .text-primary { color: #0d6efd; }
+    </style>
+</head>
+<body>
+    <h1>Time Report</h1>
+    {% if target_language %}
+        <h3>(Translated to {{ target_language }})</h3>
+    {% endif %}
+
+    <p><strong>User:</strong> {{ request.user.get_full_name|default:request.user.username }}</p>
+    <p><strong>Period:</strong> {{ start_date }} to {{ end_date }}</p>
+    <p><strong>Project:</strong> {{ project.name|default:"All Projects" }}</p>
+    {% if total_duration %}
+        <p><strong>Total Time Tracked:</strong> {{ total_duration }}</p>
+    {% endif %}
+
+    <hr>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Details</th>
+                <th>Project</th>
+                <th>Start Time</th>
+                <th>Duration</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in entries %}
+            <tr>
+                {% if target_language %}
+                    <td>
+                        <strong>{{ entry.title }}</strong><br>
+                        <small class="text-primary"><em>Original: {{ entry.original.title }}</em></small>
+                        <hr>
+                        <small><strong>Description:</strong> {{ entry.description|default:"-" }}</small><br>
+                        <small class="text-primary"><em>Original: {{ entry.original.description|default:"-" }}</em></small>
+                        <hr>
+                        <small><strong>Notes:</strong> {{ entry.notes|default:"-" }}</small><br>
+                        <small class="text-primary"><em>Original: {{ entry.original.notes|default:"-" }}</em></small>
+                    </td>
+                    <td>{{ entry.original.project.name|default:"-" }}</td>
+                    <td>{{ entry.original.start_time|date:"Y-m-d H:i" }}</td>
+                    <td>{{ entry.original.duration.total_seconds|floatformat:"0" }}s</td>
+                {% else %}
+                    <td>
+                        <strong>{{ entry.title }}</strong><br>
+                        <small><strong>Description:</strong> {{ entry.description|default:"-" }}</small><br>
+                        <small><strong>Notes:</strong> {{ entry.notes|default:"-" }}</small>
+                        {% if entry.images.all %}
+                            <hr>
+                            <small><strong>Images:</strong>
+                                {% for img in entry.images.all %}
+                                    <a href="{{ request.scheme }}://{{ request.get_host }}{{ img.image.url }}">{{ img.image.name }}</a>{% if not forloop.last %}, {% endif %}
+                                {% endfor %}
+                            </small>
+                        {% endif %}
+                    </td>
+                    <td>{{ entry.project.name|default:"-" }}</td>
+                    <td>{{ entry.start_time|date:"Y-m-d H:i" }}</td>
+                    <td>{{ entry.duration.total_seconds|floatformat:"0" }}s</td>
+                {% endif %}
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" style="text-align: center;">No entries found for this period.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

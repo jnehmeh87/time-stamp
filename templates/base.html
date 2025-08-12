@@ -64,5 +64,24 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY31HB60NNkmXc5s9fDVZLESaAA55NDz0xhy9GkcIdslK1eN7N6jIeHz"
         crossorigin="anonymous"></script>
+    
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Convert UTC dates to local time
+    document.querySelectorAll('[data-utc-date]').forEach(function(element) {
+        const utcDate = new Date(element.dataset.utcDate);
+        element.textContent = utcDate.toLocaleString();
+    });
+
+    // Add confirmation prompts to forms
+    document.querySelectorAll('form[data-confirm-message]').forEach(function(form) {
+        form.addEventListener('submit', function(event) {
+            if (!confirm(form.dataset.confirmMessage)) {
+                event.preventDefault();
+            }
+        });
+    });
+    </script>
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

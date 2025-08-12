@@ -4,13 +4,18 @@ from .models import TimeEntry, Project, TimeEntryImage
 class ReportForm(forms.Form):
     start_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}))
     end_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}))
+    category = forms.ChoiceField(choices=[('', 'All Categories')] + TimeEntry.CATEGORY_CHOICES, required=False, widget=forms.Select(attrs={'class': 'form-select'}))
     project = forms.ModelChoiceField(queryset=Project.objects.none(), required=False, empty_label="All Projects", widget=forms.Select(attrs={'class': 'form-select'}))
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         if user:
-            self.fields['project'].queryset = Project.objects.filter(user=user)
+            projects = Project.objects.filter(user=user)
+            # If a category is selected in the form data, filter projects by it
+            if self.data.get('category'):
+                projects = projects.filter(category=self.data.get('category'))
+            self.fields['project'].queryset = projects
 
 
 class MultiImageInput(forms.ClearableFileInput):
@@ -40,6 +45,7 @@ class TimeEntryUpdateForm(forms.ModelForm):
         if user:
             # Populate project choices with projects owned by the current user
             self.fields['project'].queryset = Project.objects.filter(user=user)
+            # The empty_label is set on the field, not the widget for ModelChoiceField
             self.fields['project'].empty_label = "No Project"
 
     def save(self, commit=True):
@@ -54,12 +60,3 @@ class TimeEntryUpdateForm(forms.ModelForm):
             # Defer to caller if they save with commit=False
             self._pending_images = image_files
         return instance
-
-    def save_m2m(self):
-        super().save_m2m()
-        # If commit=False path used and later manually saved:
-        if hasattr(self, '_pending_images') and self._pending_images:
-            TimeEntryImage.objects.bulk_create([
-                TimeEntryImage(time_entry=self.instance, image=img) for img in self._pending_images
-            ])
-            del self._pending_images

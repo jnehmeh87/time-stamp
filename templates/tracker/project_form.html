@@ -20,6 +20,13 @@
                         <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
                         <textarea name="description" id="{{ form.description.id_for_label }}" class="form-control" rows="3">{{ form.description.value|default:'' }}</textarea>
                     </div>
+                    <div class="mb-3">
+                        <label for="{{ form.category.id_for_label }}" class="form-label">Category</label>
+                        <select name="category" id="{{ form.category.id_for_label }}" class="form-select">
+                            <option value="work" {% if form.instance.category == 'work' or not form.instance.category %}selected{% endif %}>Work</option>
+                            <option value="personal" {% if form.instance.category == 'personal' %}selected{% endif %}>Personal</option>
+                        </select>
+                    </div>
                     <button type="submit" class="btn btn-primary w-100">Save Project</button>
                 </form>
             </div>
