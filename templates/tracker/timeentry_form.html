@@ -13,7 +13,7 @@
                 {% if object.duration %}
                 <p><strong>Duration:</strong> {{ object.duration|floatformat:"-2" }}</p>
                 {% endif %}
-                <form method="post">
+                <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
                     <div class="mb-3">
                         <label for="{{ form.title.id_for_label }}" class="form-label">{{ form.title.label }}</label>
@@ -35,8 +35,24 @@
                         <label for="{{ form.category.id_for_label }}" class="form-label">{{ form.category.label }}</label>
                         {{ form.category }}
                     </div>
+                    <div class="mb-3">
+                        <label for="{{ form.images.id_for_label }}" class="form-label">Upload Images</label>
+                        {{ form.images }}
+                    </div>
                     <button type="submit" class="btn btn-primary w-100">Save Entry</button>
                 </form>
+
+                {% if object.images.all %}
+                <hr>
+                <h5>Uploaded Images:</h5>
+                <div class="row">
+                    {% for img in object.images.all %}
+                    <div class="col-md-4 mb-3">
+                        <img src="{{ img.image.url }}" alt="Time Entry Image" class="img-fluid rounded">
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>

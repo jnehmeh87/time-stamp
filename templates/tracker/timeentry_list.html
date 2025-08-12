@@ -7,6 +7,41 @@
     <h1>My Time Entries</h1>
 </div>
 
+<div class="card mb-4">
+    <div class="card-header">Filters</div>
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label for="start_date" class="form-label">Start Date</label>
+                <input type="date" name="start_date" id="start_date" class="form-control" value="{{ filter_form.start_date|default:'' }}">
+            </div>
+            <div class="col-md-3">
+                <label for="end_date" class="form-label">End Date</label>
+                <input type="date" name="end_date" id="end_date" class="form-control" value="{{ filter_form.end_date|default:'' }}">
+            </div>
+            <div class="col-md-3">
+                <label for="category" class="form-label">Category</label>
+                <select name="category" id="category" class="form-select">
+                    <option value="">All</option>
+                    <option value="work" {% if filter_form.category == 'work' %}selected{% endif %}>Work</option>
+                    <option value="personal" {% if filter_form.category == 'personal' %}selected{% endif %}>Personal</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="show_archived" id="show_archived" value="on" {% if filter_form.show_archived %}checked{% endif %}>
+                    <label class="form-check-label" for="show_archived">
+                        Show Archived
+                    </label>
+                </div>
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary w-100">Filter</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <div class="card">
     <div class="card-body">
         <div class="table-responsive">
@@ -19,21 +54,30 @@
                         <th>End Time</th>
                         <th>Duration</th>
                         <th>Category</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for entry in entries %}
-                    <tr>
+                    <tr class="{% if entry.is_archived %}table-secondary text-muted{% endif %}">
                         <td><a href="{% url 'tracker:entry_update' entry.pk %}">{{ entry.title }}</a></td>
                         <td>{{ entry.project.name|default:"-" }}</td>
                         <td>{{ entry.start_time|date:"Y-m-d H:i" }}</td>
                         <td>{{ entry.end_time|date:"Y-m-d H:i" }}</td>
                         <td>{{ entry.duration|floatformat:"-2" }}</td>
                         <td>{{ entry.get_category_display }}</td>
+                        <td>
+                            <form action="{% url 'tracker:entry_toggle_archive' entry.pk %}" method="post" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm {% if entry.is_archived %}btn-outline-secondary{% else %}btn-outline-warning{% endif %}">
+                                    {% if entry.is_archived %}Unarchive{% else %}Archive{% endif %}
+                                </button>
+                            </form>
+                        </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="text-center">No time entries found.</td>
+                        <td colspan="7" class="text-center">No time entries found.</td>
                     </tr>
                     {% endfor %}
                 </tbody>

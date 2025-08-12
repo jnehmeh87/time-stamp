@@ -1,11 +1,14 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
+from django.views import View
 from django.views.generic import UpdateView, ListView, CreateView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views import View
+from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.utils import timezone
 from django.urls import reverse_lazy
 from .models import TimeEntry, Project
-from .forms import TimeEntryUpdateForm
+from .forms import TimeEntryUpdateForm, ReportForm
+from datetime import timedelta
 
 class HomePageView(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
@@ -14,30 +17,103 @@ class HomePageView(LoginRequiredMixin, View):
         # which redirects to the login page.
         return render(request, 'home.html', {'active_entry': active_entry})
 
+@login_required
 def start_timer(request):
     if request.method == 'POST':
-        # Ensure no other timer is running for the user
-        if not TimeEntry.objects.filter(user=request.user, end_time__isnull=True).exists():
-            TimeEntry.objects.create(user=request.user, start_time=timezone.now(), title="New Entry")
+        with transaction.atomic():
+            if not TimeEntry.objects.select_for_update().filter(user=request.user, end_time__isnull=True).exists():
+                TimeEntry.objects.create(user=request.user, start_time=timezone.now(), title="New Entry")
     return redirect('tracker:home')
 
+@login_required
 def stop_timer(request):
     if request.method == 'POST':
-        active_entry = TimeEntry.objects.filter(user=request.user, end_time__isnull=True).first()
-        if active_entry:
-            active_entry.end_time = timezone.now()
-            active_entry.save()
-            return redirect('tracker:entry_update', pk=active_entry.pk)
+        with transaction.atomic():
+            active_entry = TimeEntry.objects.select_for_update().filter(user=request.user, end_time__isnull=True).first()
+            if active_entry:
+                active_entry.end_time = timezone.now()
+                active_entry.full_clean()
+                active_entry.save()
+                return redirect('tracker:entry_update', pk=active_entry.pk)
     return redirect('tracker:home')
+
+@login_required
+def toggle_entry_archive(request, pk):
+    if request.method == 'POST':
+        entry = get_object_or_404(TimeEntry, pk=pk, user=request.user)
+        entry.is_archived = not entry.is_archived
+        entry.save()
+    return redirect('tracker:entry_list')
+
+
+class ReportView(LoginRequiredMixin, View):
+    def get(self, request, *args, **kwargs):
+        form = ReportForm(user=request.user)
+        return render(request, 'tracker/report_form.html', {'form': form})
+
+    def post(self, request, *args, **kwargs):
+        form = ReportForm(request.POST, user=request.user)
+        if form.is_valid():
+            start_date = form.cleaned_data['start_date']
+            end_date = form.cleaned_data['end_date']
+            project = form.cleaned_data.get('project')
+
+            entries = TimeEntry.objects.filter(
+                user=request.user,
+                start_time__date__gte=start_date,
+                end_time__date__lte=end_date,
+                end_time__isnull=False
+            )
+
+            if project:
+                entries = entries.filter(project=project)
+
+            total_duration = sum([entry.duration for entry in entries if entry.duration], timedelta())
+
+            context = {
+                'form': form,
+                'entries': entries,
+                'total_duration': total_duration,
+                'start_date': start_date,
+                'end_date': end_date,
+                'project': project,
+            }
+            return render(request, 'tracker/report_form.html', context)
+
+        return render(request, 'tracker/report_form.html', {'form': form})
+
 
 class TimeEntryListView(LoginRequiredMixin, ListView):
     model = TimeEntry
     template_name = 'tracker/timeentry_list.html'
     context_object_name = 'entries'
+    paginate_by = 20
 
     def get_queryset(self):
-        # Return user's entries, newest first, excluding any active timer
-        return TimeEntry.objects.filter(user=self.request.user, end_time__isnull=False).order_by('-start_time')
+        queryset = TimeEntry.objects.filter(user=self.request.user, end_time__isnull=False)
+
+        # Filtering logic
+        start_date = self.request.GET.get('start_date')
+        end_date = self.request.GET.get('end_date')
+        category = self.request.GET.get('category')
+        show_archived = self.request.GET.get('show_archived')
+
+        if start_date:
+            queryset = queryset.filter(start_time__date__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(start_time__date__lte=end_date)
+        if category:
+            queryset = queryset.filter(category=category)
+        
+        if not show_archived:
+            queryset = queryset.filter(is_archived=False)
+
+        return queryset.order_by('-start_time')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['filter_form'] = self.request.GET
+        return context
 
 class TimeEntryUpdateView(LoginRequiredMixin, UpdateView):
     model = TimeEntry
