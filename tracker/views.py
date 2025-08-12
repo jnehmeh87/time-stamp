@@ -70,10 +70,16 @@ class ReportView(LoginRequiredMixin, View):
 
             total_duration = sum([entry.duration for entry in entries if entry.duration], timedelta())
 
+            # Format total_duration into a readable string HH:MM:SS
+            total_seconds = int(total_duration.total_seconds())
+            hours, remainder = divmod(total_seconds, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            formatted_total_duration = f'{hours:02}:{minutes:02}:{seconds:02}'
+
             context = {
                 'form': form,
                 'entries': entries,
-                'total_duration': total_duration,
+                'total_duration': formatted_total_duration,
                 'start_date': start_date,
                 'end_date': end_date,
                 'project': project,
