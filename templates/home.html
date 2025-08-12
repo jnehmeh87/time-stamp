@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Time Stamp App{% endblock %}
+
+{% block content %}
+{% if user.is_authenticated %}
+    <div class="text-center">
+        <div class="card mx-auto" style="max-width: 500px;">
+            <div class="card-body p-4">
+                <h2 class="card-title mb-3">Time Tracker</h2>
+                {% if active_entry %}
+                    <p class="lead">Timer is running...</p>
+                    <h1 id="timer" class="display-4 my-3" data-starttime="{{ active_entry.start_time.isoformat }}">00:00:00</h1>
+                    <form action="{% url 'tracker:stop_timer' %}" method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger btn-lg w-100">Stop Timer</button>
+                    </form>
+                {% else %}
+                    <p class="lead">Start a new time entry.</p>
+                    <form action="{% url 'tracker:start_timer' %}" method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success btn-lg w-100">Start Timer</button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if active_entry %}
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const timerElement = document.getElementById('timer');
+            const startTime = new Date(timerElement.dataset.starttime);
+
+            function updateTimer() {
+                const now = new Date();
+                const difference = now - startTime;
+
+                const hours = String(Math.floor(difference / 3600000)).padStart(2, '0');
+                const minutes = String(Math.floor((difference % 3600000) / 60000)).padStart(2, '0');
+                const seconds = String(Math.floor((difference % 60000) / 1000)).padStart(2, '0');
+
+                timerElement.textContent = `${hours}:${minutes}:${seconds}`;
+            }
+
+            setInterval(updateTimer, 1000);
+            updateTimer(); // Initial call to display timer immediately
+        });
+    </script>
+    {% endif %}
+
+{% else %}
+    {# This block is for unauthenticated users, as before. #}
+    <div class="p-5 mb-4 bg-light rounded-3">
+        <div class="container-fluid py-5">
+            <h1 class="display-5 fw-bold">Welcome to TimeStamp</h1>
+            <p class="col-md-8 fs-4">Your personal time tracking assistant. Click, track, and manage your time effectively.</p>
+            <a href="{% url 'account_signup' %}" class="btn btn-primary btn-lg">Get Started</a>
+        </div>
+    </div>
+{% endif %}
+{% endblock %}
