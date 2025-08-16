@@ -19,9 +19,13 @@ class HomePageView(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
         active_entry = TimeEntry.objects.filter(user=request.user, end_time__isnull=True).first()
         projects = Project.objects.filter(user=request.user)
+        new_project_id = request.GET.get('project_id')
+        new_category = request.GET.get('category')
         context = {
             'active_entry': active_entry,
             'projects': projects,
+            'new_project_id': new_project_id,
+            'new_category': new_category,
         }
         return render(request, 'home.html', context)
 
@@ -315,7 +319,13 @@ class ProjectCreateView(LoginRequiredMixin, CreateView):
     model = Project
     fields = ['name', 'description', 'category']
     template_name = 'tracker/project_form.html'
-    success_url = reverse_lazy('tracker:project_list')
+
+    def get_success_url(self):
+        next_url = self.request.GET.get('next')
+        if next_url:
+            # Append the new project's ID and category to the redirect URL
+            return f"{next_url}?project_id={self.object.pk}&category={self.object.category}"
+        return reverse_lazy('tracker:project_list')
 
     def form_valid(self, form):
         form.instance.user = self.request.user
