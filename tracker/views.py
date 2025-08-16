@@ -21,11 +21,19 @@ class HomePageView(LoginRequiredMixin, View):
         projects = Project.objects.filter(user=request.user)
         new_project_id = request.GET.get('project_id')
         new_category = request.GET.get('category')
+        
+        # Fetch last 10 completed entries
+        recent_entries = TimeEntry.objects.filter(
+            user=request.user, 
+            end_time__isnull=False
+        ).order_by('-start_time')[:10]
+
         context = {
             'active_entry': active_entry,
             'projects': projects,
             'new_project_id': new_project_id,
             'new_category': new_category,
+            'recent_entries': recent_entries,
         }
         return render(request, 'home.html', context)
 

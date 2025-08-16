@@ -57,6 +57,33 @@
         </div>
     </div>
 
+    {% if recent_entries %}
+    <div class="card mx-auto mt-4" style="max-width: 500px;">
+        <div class="card-body">
+            <h5 class="card-title">Recent Entries</h5>
+            <ul class="list-group list-group-flush" id="recent-entries-list">
+                {% for entry in recent_entries %}
+                <li class="list-group-item recent-entry" {% if forloop.counter > 5 %}style="display: none;"{% endif %}>
+                    <div class="d-flex w-100 justify-content-between">
+                        <h6 class="mb-1">{{ entry.title }}</h6>
+                        <small>{{ entry.formatted_duration }}</small>
+                    </div>
+                    <p class="mb-1 text-muted small">
+                        {{ entry.project.name|default:"No Project" }} | {{ entry.get_category_display }}
+                    </p>
+                </li>
+                {% endfor %}
+            </ul>
+            {% if recent_entries|length > 5 %}
+            <div class="text-center mt-3">
+                <button class="btn btn-link btn-sm" id="show-more-btn">Show More</button>
+                <button class="btn btn-link btn-sm" id="show-less-btn" style="display: none;">Show Less</button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
     {% if active_entry %}
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -115,6 +142,35 @@
 
         // Initial filter on page load
         filterProjects();
+
+        // Recent entries toggle
+        const showMoreBtn = document.getElementById('show-more-btn');
+        const showLessBtn = document.getElementById('show-less-btn');
+        const recentEntries = document.querySelectorAll('.recent-entry');
+
+        if (showMoreBtn) {
+            showMoreBtn.addEventListener('click', function() {
+                recentEntries.forEach((entry, index) => {
+                    if (index >= 5) {
+                        entry.style.display = 'list-item';
+                    }
+                });
+                showMoreBtn.style.display = 'none';
+                showLessBtn.style.display = 'inline-block';
+            });
+        }
+
+        if (showLessBtn) {
+            showLessBtn.addEventListener('click', function() {
+                recentEntries.forEach((entry, index) => {
+                    if (index >= 5) {
+                        entry.style.display = 'none';
+                    }
+                });
+                showMoreBtn.style.display = 'inline-block';
+                showLessBtn.style.display = 'none';
+            });
+        }
     });
     </script>
 
