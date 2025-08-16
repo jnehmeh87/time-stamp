@@ -3,3 +3,4 @@ django-allauth>=0.58,<0.59
 Pillow>=10.0,<11.0
 googletrans==4.0.0-rc1
 xhtml2pdf>=0.2.11
+django-widget-tweaks

@@ -1,8 +1,9 @@
 {% extends "account/base.html" %}
 {% load i18n %}
-{% load socialaccount %}
+{% load account socialaccount %}
+{% load widget_tweaks %}
 
-{% block head_title %}{% trans "Signup" %}{% endblock %}
+{% block head_title %}{% trans "Sign Up" %}{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
@@ -12,33 +13,32 @@
             <div class="card-body">
                 <p>{% blocktrans %}Already have an account? Then please <a href="{{ login_url }}">sign in</a>.{% endblocktrans %}</p>
 
+                {% get_providers as socialaccount_providers %}
+                {% if socialaccount_providers %}
                 <a href="{% provider_login_url 'google' %}" class="btn btn-outline-dark w-100 mb-3">
                     <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo" style="height: 20px; margin-right: 10px;">
                     Sign up with Google
                 </a>
-
-                <div class="text-center my-3">
-                    <small class="text-muted">OR</small>
-                </div>
+                <div class="text-center my-3"><small class="text-muted">OR</small></div>
+                {% endif %}
 
                 <form class="signup" id="signup_form" method="post" action="{% url 'account_signup' %}">
                     {% csrf_token %}
-                    
                     {% for field in form %}
-                        <div class="mb-3">
-                            <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                            {{ field }}
-                            {% if field.help_text %}
-                                <small class="form-text text-muted">{{ field.help_text }}</small>
-                            {% endif %}
-                            {% for error in field.errors %}
-                                <div class="invalid-feedback d-block">{{ error }}</div>
-                            {% endfor %}
-                        </div>
+                    <div class="mb-3">
+                        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                        {% render_field field class="form-control" %}
+                        {% if field.help_text %}
+                        <div class="form-text">{{ field.help_text|safe }}</div>
+                        {% endif %}
+                        {% for error in field.errors %}
+                        <div class="invalid-feedback d-block">{{ error }}</div>
+                        {% endfor %}
+                    </div>
                     {% endfor %}
 
                     {% if redirect_field_value %}
-                        <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
+                    <input type="hidden" name="{{ redirect_field_name }}" value="{{ redirect_field_value }}" />
                     {% endif %}
                     <button type="submit" class="btn btn-primary w-100">{% trans "Sign Up" %}</button>
                 </form>
