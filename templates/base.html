@@ -69,6 +69,10 @@
     
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Set timezone cookie
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    document.cookie = "timezone=" + tz + ";path=/;max-age=2592000"; // 30 days
+
     // Convert UTC dates to local time
     document.querySelectorAll('[data-utc-date]').forEach(function(element) {
         const utcDate = new Date(element.dataset.utcDate);

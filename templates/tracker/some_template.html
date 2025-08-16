@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% load tracker_tags %} {# Changed from 'load duration' #}
+
+{% block content %}
+    ...
+    <p>Time spent: {{ some_time_entry.duration|duration }}</p>
+    ...
+{% endblock %}
