@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-{% load duration %}
 
 {% block title %}Translated Report{% endblock %}
 
@@ -7,45 +6,46 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1>Translated Report</h1>
     <div>
-        <a href="?start_date={{ start_date }}&end_date={{ end_date }}{% if project %}&project={{ project.pk }}{% endif %}&target_language={{ request.GET.target_language }}&export=pdf" class="btn btn-danger btn-sm">
-            Export to PDF
-        </a>
-        <a href="?start_date={{ start_date }}&end_date={{ end_date }}{% if project %}&project={{ project.pk }}{% endif %}&target_language={{ request.GET.target_language }}&export=csv" class="btn btn-secondary btn-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-download" viewBox="0 0 16 16">
-                <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
-            </svg>
-            Export to CSV
-        </a>
-        <a href="{% url 'tracker:reports' %}" class="btn btn-secondary btn-sm">Back to Reports</a>
+        <a href="{{ request.get_full_path }}&export=pdf" class="btn btn-outline-danger">Export as PDF</a>
+        <a href="{{ request.get_full_path }}&export=csv" class="btn btn-outline-secondary">Export as CSV</a>
     </div>
 </div>
 
-
-<div class="card">
-    <div class="card-header">
-        <h4>Report Summary (Translated to {{ target_language }})</h4>
-    </div>
+<div class="card mb-4">
     <div class="card-body">
-        <p><strong>Period:</strong> {{ start_date }} to {{ end_date }}</p>
-        <p><strong>Project:</strong> {{ project.name|default:"All Projects" }}</p>
+        <p class="mb-1"><strong>Project:</strong> {{ project.name|default:"All Projects" }}</p>
+        <p class="mb-1"><strong>Date Range:</strong> {{ start_date }} to {{ end_date }}</p>
+        <p class="mb-0"><strong>Language:</strong> {{ target_language }}</p>
+    </div>
+</div>
 
-        <h5 class="mt-4">Detailed Entries</h5>
-        <div class="table-responsive">
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Details (Original & Translated)</th>
-                        <th>Project</th>
-                        <th>Start Time</th>
-                        <th>Duration</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for entry in entries %}
-                    <tr>
-                        <td>
-                            <strong>{{ entry.original.title }}</strong><br>
+<div class="table-responsive">
+    <table class="table table-bordered">
+        <thead class="table-light">
+            <tr>
+                <th>Original Title</th>
+                <th>Translated Title</th>
+                <th>Original Description</th>
+                <th>Translated Description</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in entries %}
+            <tr>
+                <td>{{ item.original.title|default:"-" }}</td>
+                <td>{{ item.title|default:"-" }}</td>
+                <td>{{ item.original.description|default:"-" }}</td>
+                <td>{{ item.description|default:"-" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" class="text-center">No entries found for translation.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
                             <span class="text-primary">{{ entry.title }}</span>
                             <hr class="my-1">
                             <small><strong>Description:</strong> {{ entry.original.description|default:"-" }}</small><br>

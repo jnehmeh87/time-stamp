@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Confirm Unarchive{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h1 class="mb-0">Confirm Unarchive</h1>
+    </div>
+    <div class="card-body">
+        <p>Are you sure you want to unarchive the following time entries?</p>
+
+        <ul>
+            {% for entry in entries_to_process %}
+                <li>{{ entry.title }} ({{ entry.start_time|date:"Y-m-d H:i" }})</li>
+            {% empty %}
+                <li>No entries selected.</li>
+            {% endfor %}
+        </ul>
+
+        {% if entries_to_process %}
+        <form method="post" action="{% url 'tracker:entry_bulk_archive' %}">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="unarchive">
+            {% for entry in entries_to_process %}
+                <input type="hidden" name="selected_entries" value="{{ entry.pk }}">
+            {% endfor %}
+            <button type="submit" class="btn btn-success">Yes, unarchive them</button>
+            <a href="{% url 'tracker:entry_list' %}?show_archived=on" class="btn btn-secondary">Cancel</a>
+        </form>
+        {% else %}
+            <a href="{% url 'tracker:entry_list' %}?show_archived=on" class="btn btn-primary">Back to Archived Entries</a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

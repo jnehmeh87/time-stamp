@@ -1,30 +1,31 @@
 {% extends "base.html" %}
 
-{% block title %}Confirm Deletion{% endblock %}
+{% block title %}Confirm {{ action|capfirst }}{% endblock %}
 
 {% block content %}
 <div class="card">
     <div class="card-header">
-        <h1 class="mb-0">Confirm Deletion</h1>
+        <h1 class="mb-0">Confirm {{ action|capfirst }}</h1>
     </div>
     <div class="card-body">
-        <p>Are you sure you want to delete the following time entries? This action cannot be undone.</p>
+        <p>Are you sure you want to {{ action }} the following time entries?</p>
 
         <ul>
-            {% for entry in entries_to_delete %}
+            {% for entry in entries_to_process %}
                 <li>{{ entry.title }} ({{ entry.start_time|date:"Y-m-d H:i" }})</li>
             {% empty %}
-                <li>No entries selected for deletion.</li>
+                <li>No entries selected.</li>
             {% endfor %}
         </ul>
 
-        {% if entries_to_delete %}
-        <form method="post" action="{% url 'tracker:entry_bulk_delete' %}">
+        {% if entries_to_process %}
+        <form method="post" action="{% url 'tracker:entry_bulk_archive' %}">
             {% csrf_token %}
-            {% for entry in entries_to_delete %}
+            <input type="hidden" name="action" value="{{ action }}">
+            {% for entry in entries_to_process %}
                 <input type="hidden" name="selected_entries" value="{{ entry.pk }}">
             {% endfor %}
-            <button type="submit" class="btn btn-danger">Yes, delete them</button>
+            <button type="submit" class="btn btn-warning">Yes, {{ action }} them</button>
             <a href="{% url 'tracker:entry_list' %}" class="btn btn-secondary">Cancel</a>
         </form>
         {% else %}

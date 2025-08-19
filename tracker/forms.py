@@ -60,3 +60,23 @@ class TimeEntryUpdateForm(forms.ModelForm):
             # Defer to caller if they save with commit=False
             self._pending_images = image_files
         return instance
+
+class TimeEntryForm(forms.ModelForm):
+    class Meta:
+        model = TimeEntry
+        fields = ['title', 'project', 'start_time', 'end_time', 'category']
+        widgets = {
+            'start_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'end_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+        }
+
+class ProjectForm(forms.ModelForm):
+    class Meta:
+        model = Project
+        fields = ['name', 'description', 'category']
+
+class TimeEntryFilterForm(forms.Form):
+    start_date = forms.DateField(required=False, widget=forms.DateInput(attrs={'type': 'date'}))
+    end_date = forms.DateField(required=False, widget=forms.DateInput(attrs={'type': 'date'}))
+    category = forms.ChoiceField(choices=[('', 'All')] + TimeEntry.CATEGORY_CHOICES, required=False)
+    show_archived = forms.BooleanField(required=False)
