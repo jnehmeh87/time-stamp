@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Report</title>
+    <style>
+        @font-face {
+            font-family: "DejaVuSans";
+            src: url("/static/fonts/DejaVuSans.ttf") format("truetype");
+        }
+        body {
+            font-family: "DejaVuSans", sans-serif;
+            font-size: 10px;
+        }
+        small {
+            font-size: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            word-wrap: break-word;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .time-col {
+            width: 15%;
+            white-space: nowrap;
+        }
+        .duration-col {
+            width: 10%;
+            white-space: nowrap;
+        }
+        .center-col {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Report</h1>
+    <p><strong>Project:</strong> {{ project.name|default:"All Projects" }}</p>
+    <p><strong>Period:</strong> {{ start_date|date:"Y-m-d" }} to {{ end_date|date:"Y-m-d" }}</p>
+    <p><strong>Total Time Tracked:</strong> {{ total_duration }}</p>
+    <br>
+    <table>
+        <thead>
+            <tr>
+                <th>Details</th>
+                <th class="time-col center-col">Start Time</th>
+                <th class="time-col center-col">End Time</th>
+                <th class="duration-col center-col">Duration</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entry in entries %}
+            <tr>
+                <td>
+                    {% if not project %}
+                    <span><strong>Project:</strong> {{ entry.project.name|default:"-" }}</span><br>
+                    {% endif %}
+                    <span><strong>Entry:</strong> {{ entry.title }}</span>
+                    <br><br>
+                    <small><strong>Description:</strong><br>
+                    <small>{{ entry.description|default:"-" }}</small>
+                    <br><br>
+                    <small><strong>Notes:</strong><br>
+                    <small>{{ entry.notes|default:"-" }}</small>
+                </td>
+                <td class="center-col">{{ entry.start_time|date:"Y-m-d H:i" }}</td>
+                <td class="center-col">{{ entry.end_time|date:"Y-m-d H:i" }}</td>
+                <td class="center-col">{{ entry.formatted_duration }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" class="text-center">No entries found for this period.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>
+</body>
+</html>

@@ -2,78 +2,123 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>Translated Report</title>
+    <title>{{ trans.t_translated_report }}</title>
     <style>
         @font-face {
             font-family: "DejaVuSans";
-            src: url("/path/to/your/fonts/DejaVuSans.ttf"); /* Update this path */
+            src: url("/static/fonts/DejaVuSans.ttf") format("truetype");
+            /* You must provide a valid path to a font that supports the target language characters */
         }
         body {
             font-family: "DejaVuSans", sans-serif;
+            font-size: 10px;
+        }
+        small {
+            font-size: 10px; /* Increase size of small text for readability */
         }
         table {
             width: 100%;
             border-collapse: collapse;
         }
-        th, td {
+        td {
             border: 1px solid #ddd;
             padding: 8px;
             text-align: left;
+            word-wrap: break-word;
         }
         th {
+            border: 1px solid #ddd;
+            padding: 4px 8px 2px 8px; /* Reduced bottom padding */
+            text-align: left;
+            word-wrap: break-word;
             background-color: #f2f2f2;
         }
+        .time-col {
+            width: 15%;
+            white-space: nowrap;
+        }
+        .duration-col {
+            width: 10%;
+            white-space: nowrap;
+        }
+        .center-col {
+            text-align: center;
+        }
+        {% if is_rtl %}
+        body {
+            direction: rtl;
+        }
+        th, td {
+            text-align: right;
+        }
+        .center-col {
+            text-align: center; /* Keep centered columns centered */
+        }
+        {% endif %}
     </style>
 </head>
 <body>
-    <h1>Translated Report</h1>
-    <p><strong>Project:</strong> {{ project.name|default:"All Projects" }}</p>
-    <p><strong>Date Range:</strong> {{ start_date }} to {{ end_date }}</p>
-    <p><strong>Language:</strong> {{ target_language }}</p>
-    <hr>
+    <h1>{{ trans.t_translated_report }}</h1>
+    <p><strong>{{ trans.t_project }}:</strong> {{ project.name|default:trans.t_all_projects }}</p>
+    <p><strong>{{ trans.t_date_range }}:</strong> {{ start_date }} to {{ end_date }}</p>
+    <p><strong>{{ trans.t_language }}:</strong> {{ target_language }}</p>
+    <br>
     <table>
         <thead>
             <tr>
-                <th>Original Title</th>
-                <th>Translated Title</th>
-                <th>Original Description</th>
-                <th>Translated Description</th>
+                {% if is_rtl %}
+                    <th class="duration-col center-col">{{ trans.t_duration }}</th>
+                    <th class="time-col center-col">{{ trans.t_end_time }}</th>
+                    <th class="time-col center-col">{{ trans.t_start_time }}</th>
+                    <th class="center-col">{{ trans.t_details }}</th>
+                {% else %}
+                    <th class="center-col">{{ trans.t_details }}</th>
+                    <th class="time-col center-col">{{ trans.t_start_time }}</th>
+                    <th class="time-col center-col">{{ trans.t_end_time }}</th>
+                    <th class="duration-col center-col">{{ trans.t_duration }}</th>
+                {% endif %}
             </tr>
         </thead>
         <tbody>
-            {% for item in entries %}
+            {% for entry in entries %}
             <tr>
-                <td>{{ item.original.title|default:"-" }}</td>
-                <td>{{ item.title|default:"-" }}</td>
-                <td>{{ item.original.description|default:"-" }}</td>
-                <td>{{ item.description|default:"-" }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</body>
-</html>
+                {% if is_rtl %}
+                    <td class="center-col">{{ entry.formatted_duration }}</td>
+                    <td class="center-col">{{ entry.original.end_time|date:"Y-m-d H:i" }}</td>
+                    <td class="center-col">{{ entry.original.start_time|date:"Y-m-d H:i" }}</td>
                     <td>
-                        <strong>{{ entry.title }}</strong><br>
-                        <small><strong>Description:</strong> {{ entry.description|default:"-" }}</small><br>
-                        <small><strong>Notes:</strong> {{ entry.notes|default:"-" }}</small>
-                        {% if entry.images.all %}
-                            <hr>
-                            <small><strong>Images:</strong>
-                                {% for img in entry.images.all %}
-                                    <a href="{{ request.scheme }}://{{ request.get_host }}{{ img.image.url }}">{{ img.image.name }}</a>{% if not forloop.last %}, {% endif %}
-                                {% endfor %}
-                            </small>
+                        {% if not project %}
+                        <span><strong>{{ trans.t_project }}:</strong> {{ entry.original.project.name|default:"-" }}</span><br>
                         {% endif %}
+                        <span><strong>{{ trans.t_entry }}:</strong> {{ entry.title }}</span>
+                        <br><br>
+                        <small><strong>{{ trans.t_description }}:</strong><br>
+                        <small>{{ entry.description|default:"-" }}</small>
+                        <br><br>
+                        <small><strong>{{ trans.t_notes }}:</strong><br>
+                        <small>{{ entry.notes|default:"-" }}</small>
                     </td>
-                    <td>{{ entry.project.name|default:"-" }}</td>
-                    <td>{{ entry.start_time|date:"Y-m-d H:i" }}</td>
-                    <td>{{ entry.duration.total_seconds|floatformat:"0" }}s</td>
+                {% else %}
+                    <td>
+                        {% if not project %}
+                        <span><strong>{{ trans.t_project }}:</strong> {{ entry.original.project.name|default:"-" }}</span><br>
+                        {% endif %}
+                        <span><strong>{{ trans.t_entry }}:</strong> {{ entry.title }}</span>
+                        <br><br>
+                        <small><strong>{{ trans.t_description }}:</strong><br>
+                        <small>{{ entry.description|default:"-" }}</small>
+                        <br><br>
+                        <small><strong>{{ trans.t_notes }}:</strong><br>
+                        <small>{{ entry.notes|default:"-" }}</small>
+                    </td>
+                    <td class="center-col">{{ entry.original.start_time|date:"Y-m-d H:i" }}</td>
+                    <td class="center-col">{{ entry.original.end_time|date:"Y-m-d H:i" }}</td>
+                    <td class="center-col">{{ entry.formatted_duration }}</td>
                 {% endif %}
             </tr>
             {% empty %}
             <tr>
-                <td colspan="4" style="text-align: center;">No entries found for this period.</td>
+                <td colspan="4" class="text-center">{{ trans.t_no_entries }}</td>
             </tr>
             {% endfor %}
         </tbody>

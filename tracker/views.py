@@ -285,6 +285,32 @@ class ReportView(LoginRequiredMixin, View):
             if project:
                 entries = entries.filter(project=project)
 
+            # Pre-format durations for the PDF context
+            for entry in entries:
+                if entry.duration:
+                    total_seconds = int(entry.duration.total_seconds())
+                    hours, remainder = divmod(total_seconds, 3600)
+                    minutes, seconds = divmod(remainder, 60)
+                    entry.formatted_duration = f'{hours:02}:{minutes:02}:{seconds:02}'
+                else:
+                    entry.formatted_duration = "00:00:00"
+
+            total_duration_val = sum([entry.duration for entry in entries if entry.duration], timedelta())
+            
+            total_seconds = int(total_duration_val.total_seconds())
+            hours, remainder = divmod(total_seconds, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            formatted_total_duration = f'{hours:02}:{minutes:02}:{seconds:02}'
+
+            context.update({
+                'entries': entries,
+                'total_duration': formatted_total_duration,
+                'start_date': start_date,
+                'end_date': end_date,
+                'project': project,
+                'request': request,
+            })
+
             if export_format == 'csv':
                 response = HttpResponse(content_type='text/csv')
                 response['Content-Disposition'] = f'attachment; filename="time_report_{start_date}_to_{end_date}.csv"'
@@ -302,18 +328,18 @@ class ReportView(LoginRequiredMixin, View):
                         entry.notes,
                     ])
                 return response
-
-            total_duration = sum([entry.duration for entry in entries if entry.duration], timedelta())
             
-            context.update({
-                'entries': entries,
-                'total_duration': total_duration,
-                'start_date': start_date,
-                'end_date': end_date,
-                'project': project,
-                'request': request,
-            })
+            if export_format == 'pdf':
+                pdf = render_to_pdf('tracker/report_untranslated_pdf.html', context)
+                if pdf:
+                    response = HttpResponse(pdf, content_type='application/pdf')
+                    filename = f"report_{start_date}_to_{end_date}.pdf"
+                    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+                    return response
 
+            # Use the already calculated total_duration for the HTML view
+            context['total_duration'] = total_duration_val
+        
         return render(request, 'tracker/report_form.html', context)
 
 @login_required
@@ -338,17 +364,56 @@ def translate_report(request):
         entries = entries.filter(project_id=project_id)
 
     translator = Translator()
+
+    # --- RTL Language Check ---
+    RTL_LANGUAGES = ['ar', 'he', 'fa', 'ur']
+    is_rtl = target_language in RTL_LANGUAGES
+
+    # Get the English name of the target language and then translate it.
+    target_language_english_name = LANGUAGES.get(target_language, target_language).capitalize()
+    try:
+        translated_language_name = translator.translate(target_language_english_name, dest=target_language).text
+    except (TypeError, AttributeError):
+        # If translation of the language name fails, fall back to the English name
+        translated_language_name = target_language_english_name
+
+    # Translate static text for the template
+    trans_context = {
+        't_translated_report': translator.translate('Translated Report', dest=target_language).text,
+        't_project': translator.translate('Project', dest=target_language).text,
+        't_date_range': translator.translate('Date Range', dest=target_language).text,
+        't_language': translator.translate('Language', dest=target_language).text,
+        't_all_projects': translator.translate('All Projects', dest=target_language).text,
+        't_details': translator.translate('Details', dest=target_language).text,
+        't_start_time': translator.translate('Start Time', dest=target_language).text,
+        't_end_time': translator.translate('End Time', dest=target_language).text,
+        't_duration': translator.translate('Duration', dest=target_language).text,
+        't_description': translator.translate('Description', dest=target_language).text,
+        't_notes': translator.translate('Notes', dest=target_language).text,
+        't_entry': translator.translate('Entry', dest=target_language).text,
+        't_no_entries': translator.translate('No entries found for this period.', dest=target_language).text,
+    }
+
     translated_entries = []
     for entry in entries:
         translated_title = translator.translate(entry.title, dest=target_language).text if entry.title else ""
         translated_description = translator.translate(entry.description, dest=target_language).text if entry.description else ""
         translated_notes = translator.translate(entry.notes, dest=target_language).text if entry.notes else ""
 
+        # Pre-format duration for PDF
+        duration_str = ""
+        if entry.duration:
+            total_seconds = int(entry.duration.total_seconds())
+            hours, remainder = divmod(total_seconds, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            duration_str = f'{hours:02}:{minutes:02}:{seconds:02}'
+
         translated_entries.append({
             'original': entry,
             'title': translated_title,
             'description': translated_description,
             'notes': translated_notes,
+            'formatted_duration': duration_str,
         })
     
     project = Project.objects.filter(pk=project_id).first() if project_id else None
@@ -358,8 +423,10 @@ def translate_report(request):
         'start_date': start_date,
         'end_date': end_date,
         'project': project,
-        'target_language': LANGUAGES.get(target_language, target_language).capitalize(),
+        'target_language': translated_language_name,
         'request': request,
+        'trans': trans_context,
+        'is_rtl': is_rtl,
     }
 
     if export_format == 'pdf':

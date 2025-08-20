@@ -29,10 +29,12 @@
                                 <h5 class="mb-1">{{ project.name }}</h5>
                                 <p class="mb-1 text-muted">{{ project.description|truncatewords:20 }}</p>
                             </div>
-                            <div class="btn-group ms-2" role="group" aria-label="Project actions">
+                            <div class="d-flex align-items-center gap-1 ms-2">
                                 <a href="{% url 'tracker:project_update' project.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
-                                <a href="{% url 'tracker:project_delete' project.pk %}" class="btn btn-sm btn-outline-danger"
-                                   onclick="return confirm('Are you sure you want to delete the project \'{{ project.name|escapejs }}\'? This will also delete all associated time entries.');">Delete</a>
+                                <form action="{% url 'tracker:project_delete' project.pk %}" method="post" onsubmit="return confirm('Are you sure you want to delete the project \'{{ project.name|escapejs }}\'? This will also delete all associated time entries.');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                </form>
                             </div>
                         </div>
                     </li>
@@ -52,10 +54,12 @@
                                 <h5 class="mb-1">{{ project.name }}</h5>
                                 <p class="mb-1 text-muted">{{ project.description|truncatewords:20 }}</p>
                             </div>
-                            <div class="btn-group ms-2" role="group" aria-label="Project actions">
+                            <div class="d-flex align-items-center gap-1 ms-2">
                                 <a href="{% url 'tracker:project_update' project.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
-                                <a href="{% url 'tracker:project_delete' project.pk %}" class="btn btn-sm btn-outline-danger"
-                                   onclick="return confirm('Are you sure you want to delete the project \'{{ project.name|escapejs }}\'? This will also delete all associated time entries.');">Delete</a>
+                                <form action="{% url 'tracker:project_delete' project.pk %}" method="post" onsubmit="return confirm('Are you sure you want to delete the project \'{{ project.name|escapejs }}\'? This will also delete all associated time entries.');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                </form>
                             </div>
                         </div>
                     </li>
@@ -86,10 +90,12 @@
                                 <h5 class="mb-1">{{ project.name }}</h5>
                                 <p class="mb-1 text-muted">{{ project.description|truncatewords:20 }}</p>
                             </div>
-                            <div class="btn-group ms-2" role="group" aria-label="Project actions">
+                            <div class="d-flex align-items-center gap-1 ms-2">
                                 <a href="{% url 'tracker:project_update' project.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
-                                <a href="{% url 'tracker:project_delete' project.pk %}" class="btn btn-sm btn-outline-danger"
-                                   onclick="return confirm('Are you sure you want to delete the project \'{{ project.name|escapejs }}\'? This will also delete all associated time entries.');">Delete</a>
+                                <form action="{% url 'tracker:project_delete' project.pk %}" method="post" onsubmit="return confirm('Are you sure you want to delete the project \'{{ project.name|escapejs }}\'? This will also delete all associated time entries.');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                </form>
                             </div>
                         </div>
                     </li>
@@ -116,10 +122,12 @@
                                 <h5 class="mb-1">{{ project.name }}</h5>
                                 <p class="mb-1 text-muted">{{ project.description|truncatewords:20 }}</p>
                             </div>
-                            <div class="btn-group ms-2" role="group" aria-label="Project actions">
+                            <div class="d-flex align-items-center gap-1 ms-2">
                                 <a href="{% url 'tracker:project_update' project.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
-                                <a href="{% url 'tracker:project_delete' project.pk %}" class="btn btn-sm btn-outline-danger"
-                                   onclick="return confirm('Are you sure you want to delete the project \'{{ project.name|escapejs }}\'? This will also delete all associated time entries.');">Delete</a>
+                                <form action="{% url 'tracker:project_delete' project.pk %}" method="post" onsubmit="return confirm('Are you sure you want to delete the project \'{{ project.name|escapejs }}\'? This will also delete all associated time entries.');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                                </form>
                             </div>
                         </div>
                     </li>

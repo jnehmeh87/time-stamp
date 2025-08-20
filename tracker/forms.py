@@ -64,19 +64,29 @@ class TimeEntryUpdateForm(forms.ModelForm):
 class TimeEntryForm(forms.ModelForm):
     class Meta:
         model = TimeEntry
-        fields = ['title', 'project', 'start_time', 'end_time', 'category']
+        fields = ['title', 'project', 'category', 'start_time', 'end_time', 'description', 'notes']
         widgets = {
-            'start_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
-            'end_time': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'start_time': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+            'end_time': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
+            'project': forms.Select(attrs={'class': 'form-select'}),
+            'category': forms.Select(attrs={'class': 'form-select'}),
+            'title': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         }
 
 class ProjectForm(forms.ModelForm):
     class Meta:
         model = Project
         fields = ['name', 'description', 'category']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'category': forms.Select(attrs={'class': 'form-select'}),
+        }
 
 class TimeEntryFilterForm(forms.Form):
-    start_date = forms.DateField(required=False, widget=forms.DateInput(attrs={'type': 'date'}))
-    end_date = forms.DateField(required=False, widget=forms.DateInput(attrs={'type': 'date'}))
-    category = forms.ChoiceField(choices=[('', 'All')] + TimeEntry.CATEGORY_CHOICES, required=False)
-    show_archived = forms.BooleanField(required=False)
+    start_date = forms.DateField(required=False, widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}))
+    end_date = forms.DateField(required=False, widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}))
+    category = forms.ChoiceField(choices=[('', 'All'), ('work', 'Work'), ('personal', 'Personal')], required=False, widget=forms.Select(attrs={'class': 'form-select'}))
+    show_archived = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}))
