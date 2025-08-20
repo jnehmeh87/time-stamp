@@ -1,6 +1,6 @@
 Django>=3.2,<4.3
 django-allauth>=0.58,<0.59
-Pillow<10
+Pillow==10.4.0
 googletrans==4.0.0-rc1
 xhtml2pdf==0.2.11
 python-bidi==0.4.2
@@ -8,3 +8,6 @@ arabic-reshaper==3.0.0
 reportlab==3.6.12
 django-widget-tweaks
 pytz
+gunicorn
+django-heroku
+whitenoise
