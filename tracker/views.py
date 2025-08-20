@@ -18,21 +18,24 @@ from .utils import render_to_pdf
 
 # --- Home & Timer Views ---
 
-class HomePageView(LoginRequiredMixin, View):
+class HomePageView(View):
     def get(self, request, *args, **kwargs):
-        active_entry = TimeEntry.objects.filter(user=request.user, end_time__isnull=True).first()
-        projects = Project.objects.filter(user=request.user)
-        recent_entries = TimeEntry.objects.filter(
-            user=request.user, 
-            end_time__isnull=False
-        ).order_by('-start_time')[:10]
+        if request.user.is_authenticated:
+            active_entry = TimeEntry.objects.filter(user=request.user, end_time__isnull=True).first()
+            projects = Project.objects.filter(user=request.user)
+            recent_entries = TimeEntry.objects.filter(
+                user=request.user, 
+                end_time__isnull=False
+            ).order_by('-start_time')[:10]
 
-        context = {
-            'active_entry': active_entry,
-            'projects': projects,
-            'recent_entries': recent_entries,
-        }
-        return render(request, 'home.html', context)
+            context = {
+                'active_entry': active_entry,
+                'projects': projects,
+                'recent_entries': recent_entries,
+            }
+            return render(request, 'home.html', context)
+        else:
+            return render(request, 'tracker/landing.html')
 
 @login_required
 def start_timer(request):
