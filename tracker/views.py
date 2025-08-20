@@ -7,7 +7,7 @@ from django.db import transaction
 from django.utils import timezone
 from django.urls import reverse_lazy
 from .models import TimeEntry, Project
-from .forms import TimeEntryForm, ProjectForm, TimeEntryFilterForm, ReportForm
+from .forms import TimeEntryForm, ProjectForm, TimeEntryFilterForm, ReportForm, TimeEntryUpdateForm
 from django.contrib import messages
 from django.db.models import Sum, F, Min, Max
 from datetime import timedelta, date
@@ -119,9 +119,14 @@ class TimeEntryCreateView(LoginRequiredMixin, CreateView):
 
 class TimeEntryUpdateView(LoginRequiredMixin, UpdateView):
     model = TimeEntry
-    form_class = TimeEntryForm
+    form_class = TimeEntryUpdateForm
     template_name = 'tracker/timeentry_form.html'
     success_url = reverse_lazy('tracker:entry_list')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
 
     def get_queryset(self):
         return super().get_queryset().filter(user=self.request.user)
@@ -239,6 +244,15 @@ class ProjectDeleteView(LoginRequiredMixin, DeleteView):
 # --- AJAX Views ---
 
 @login_required
+def get_projects_for_category(request):
+    category = request.GET.get('category')
+    projects = Project.objects.filter(user=request.user)
+    if category:
+        projects = projects.filter(category=category)
+    project_list = list(projects.values('id', 'name'))
+    return JsonResponse(project_list, safe=False)
+
+@login_required
 def get_project_dates(request):
     project_id = request.GET.get('project_id')
     if project_id:
@@ -256,6 +270,31 @@ def get_project_dates(request):
     return JsonResponse({'success': False})
 
 # --- Report and Translation Views ---
+
+class AnalyticsDashboardView(LoginRequiredMixin, View):
+    def get(self, request, *args, **kwargs):
+        user = request.user
+        
+        total_duration = TimeEntry.objects.filter(user=user, end_time__isnull=False).aggregate(
+            total=Sum(F('end_time') - F('start_time'))
+        )['total'] or timedelta()
+
+        time_per_project = TimeEntry.objects.filter(user=user, end_time__isnull=False) \
+            .values('project__name') \
+            .annotate(total_duration=Sum(F('end_time') - F('start_time'))) \
+            .order_by('-total_duration')
+
+        time_per_category = TimeEntry.objects.filter(user=user, end_time__isnull=False) \
+            .values('category') \
+            .annotate(total_duration=Sum(F('end_time') - F('start_time'))) \
+            .order_by('-total_duration')
+
+        context = {
+            'total_time_tracked': total_duration,
+            'time_per_project': time_per_project,
+            'time_per_category': time_per_category,
+        }
+        return render(request, 'tracker/analytics.html', context)
 
 class ReportView(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):

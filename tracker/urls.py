@@ -26,13 +26,15 @@ urlpatterns = [
     # Projects
     path('projects/', views.ProjectListView.as_view(), name='project_list'),
     path('project/create/', views.ProjectCreateView.as_view(), name='project_create'),
-    path('project/<int:pk>/update/', views.ProjectUpdateView.as_view(), name='project_update'),
-    path('project/<int:pk>/delete/', views.ProjectDeleteView.as_view(), name='project_delete'),
+    path('projects/<int:pk>/update/', views.ProjectUpdateView.as_view(), name='project_update'),
+    path('projects/<int:pk>/delete/', views.ProjectDeleteView.as_view(), name='project_delete'),
 
     # Reports & Translation
     path('reports/', views.ReportView.as_view(), name='reports'),
+    path('analytics/', views.AnalyticsDashboardView.as_view(), name='analytics'),
     path('reports/translate/', views.translate_report, name='translate_report'),
 
     # AJAX
+    path('ajax/get-projects-for-category/', views.get_projects_for_category, name='get_projects_for_category'),
     path('ajax/get-project-dates/', views.get_project_dates, name='project_get_dates'),
 ]

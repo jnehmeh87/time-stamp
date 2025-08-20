@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load tracker_tags %}
 
 {% block title %}Complete Time Entry{% endblock %}
 
@@ -11,13 +12,17 @@
             </div>
             <div class="card-body">
                 {% if object.duration %}
-                <p><strong>Duration:</strong> {{ object.duration|floatformat:"-2" }}</p>
+                <p><strong>Duration:</strong> {{ object.duration|human_duration }}</p>
                 {% endif %}
                 <form method="post" enctype="multipart/form-data">
                     {% csrf_token %}
                     <div class="mb-3">
                         <label for="{{ form.title.id_for_label }}" class="form-label">{{ form.title.label }}</label>
                         {{ form.title }}
+                    </div>
+                    <div class="mb-3">
+                        <label for="{{ form.category.id_for_label }}" class="form-label">{{ form.category.label }}</label>
+                        {{ form.category }}
                     </div>
                     <div class="mb-3">
                         <label for="{{ form.project.id_for_label }}" class="form-label">{{ form.project.label }}</label>
@@ -31,10 +36,7 @@
                         <label for="{{ form.notes.id_for_label }}" class="form-label">{{ form.notes.label }}</label>
                         {{ form.notes }}
                     </div>
-                    <div class="mb-3">
-                        <label for="{{ form.category.id_for_label }}" class="form-label">{{ form.category.label }}</label>
-                        {{ form.category }}
-                    </div>
+
                     <div class="mb-3">
                         <label for="{{ form.images.id_for_label }}" class="form-label">Upload Images</label>
                         {{ form.images }}
@@ -57,4 +59,48 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const categorySelect = document.getElementById('{{ form.category.id_for_label }}');
+    const projectSelect = document.getElementById('{{ form.project.id_for_label }}');
+    const initialProjectId = '{{ object.project.pk|default:"" }}';
+
+    function updateProjectList(selectedCategory, projectIdToSelect) {
+        const url = `{% url 'tracker:get_projects_for_category' %}?category=${selectedCategory}`;
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                // Clear existing options
+                projectSelect.innerHTML = '<option value="">No Project</option>';
+
+                // Add new options
+                data.forEach(function(project) {
+                    const option = new Option(project.name, project.id);
+                    projectSelect.add(option);
+                });
+
+                // Re-select the initial or previously selected project
+                if (projectIdToSelect) {
+                    projectSelect.value = projectIdToSelect;
+                }
+            })
+            .catch(error => console.error('Error fetching projects:', error));
+    }
+
+    // --- Event Listener for Category Change ---
+    categorySelect.addEventListener('change', function() {
+        updateProjectList(this.value, null); // Don't pre-select a project on change
+    });
+
+    // --- Initial Load ---
+    // Trigger the filter on page load to populate projects based on the initial category
+    if (categorySelect.value) {
+        updateProjectList(categorySelect.value, initialProjectId);
+    }
+});
+</script>
 {% endblock %}
