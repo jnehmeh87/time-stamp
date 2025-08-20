@@ -259,20 +259,26 @@ def get_project_dates(request):
 
 class ReportView(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
-        today = date.today()
-        start_of_month = today.replace(day=1)
-        initial_data = {
-            'start_date': request.GET.get('start_date', start_of_month.strftime('%Y-%m-%d')),
-            'end_date': request.GET.get('end_date', today.strftime('%Y-%m-%d')),
-            'project': request.GET.get('project')
-        }
-        form = ReportForm(initial_data, user=request.user)
-        context = {'form': form}
+        form = ReportForm(request.GET or None, user=request.user)
+        context = {'form': form, 'entries': None}
+
+        # Set default dates only if the form is not submitted
+        if not request.GET:
+            today = date.today()
+            start_of_month = today.replace(day=1)
+            form.initial = {
+                'start_date': start_of_month,
+                'end_date': today,
+            }
+            # Re-render the form with initial data
+            context['form'] = ReportForm(initial=form.initial, user=request.user)
+            return render(request, 'tracker/report_form.html', context)
 
         if form.is_valid():
             start_date = form.cleaned_data['start_date']
             end_date = form.cleaned_data['end_date']
             project = form.cleaned_data.get('project')
+            category = form.cleaned_data.get('category')
             export_format = request.GET.get('export')
 
             entries = TimeEntry.objects.filter(
@@ -284,6 +290,8 @@ class ReportView(LoginRequiredMixin, View):
 
             if project:
                 entries = entries.filter(project=project)
+            elif category:
+                entries = entries.filter(project__category=category)
 
             # Pre-format durations for the PDF context
             for entry in entries:

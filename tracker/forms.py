@@ -4,18 +4,20 @@ from .models import TimeEntry, Project, TimeEntryImage
 class ReportForm(forms.Form):
     start_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}))
     end_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}))
-    category = forms.ChoiceField(choices=[('', 'All Categories')] + TimeEntry.CATEGORY_CHOICES, required=False, widget=forms.Select(attrs={'class': 'form-select'}))
-    project = forms.ModelChoiceField(queryset=Project.objects.none(), required=False, empty_label="All Projects", widget=forms.Select(attrs={'class': 'form-select'}))
+    category = forms.ChoiceField(choices=[('', 'All Categories')] + TimeEntry.CATEGORY_CHOICES, required=False, widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_category'}))
+    project = forms.ModelChoiceField(queryset=Project.objects.none(), required=False, empty_label="All Projects", widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_project'}))
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
-        if user:
-            projects = Project.objects.filter(user=user)
-            # If a category is selected in the form data, filter projects by it
-            if self.data.get('category'):
-                projects = projects.filter(category=self.data.get('category'))
-            self.fields['project'].queryset = projects
+        
+        projects = Project.objects.filter(user=user)
+        
+        # If a category is selected in the form data, filter projects by it
+        if self.data.get('category'):
+            projects = projects.filter(category=self.data['category'])
+            
+        self.fields['project'].queryset = projects
 
 
 class MultiImageInput(forms.ClearableFileInput):
