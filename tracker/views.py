@@ -28,10 +28,18 @@ class HomePageView(View):
                 end_time__isnull=False
             ).order_by('-start_time')[:10]
 
+            # Find the most recent project for each category
+            latest_work_entry = TimeEntry.objects.filter(user=request.user, category='work', project__isnull=False).order_by('-start_time').first()
+            latest_personal_entry = TimeEntry.objects.filter(user=request.user, category='personal', project__isnull=False).order_by('-start_time').first()
+
             context = {
                 'active_entry': active_entry,
                 'projects': projects,
                 'recent_entries': recent_entries,
+                'latest_work_project_id': latest_work_entry.project.id if latest_work_entry else None,
+                'latest_personal_project_id': latest_personal_entry.project.id if latest_personal_entry else None,
+                'new_project_id': request.GET.get('new_project_id'),
+                'new_category': request.GET.get('new_category'),
             }
             return render(request, 'home.html', context)
         else:

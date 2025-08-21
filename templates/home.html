@@ -27,10 +27,13 @@
                             <div class="col-md-6 mb-3">
                                 <label for="project" class="form-label">Project</label>
                                 <div class="input-group">
-                                    <select name="project" id="project" class="form-select">
+                                    <select name="project" id="project" class="form-select"
+                                            data-latest-work-project="{{ latest_work_project_id|default:'' }}"
+                                            data-latest-personal-project="{{ latest_personal_project_id|default:'' }}"
+                                            data-new-project-id="{{ new_project_id|default:'' }}">
                                         <option value="">No Project</option>
                                         {% for project in projects %}
-                                        <option value="{{ project.pk }}" data-category="{{ project.category }}" {% if project.pk|stringformat:"s" == new_project_id %}selected{% endif %}>{{ project.name }}</option>
+                                        <option value="{{ project.pk }}" data-category="{{ project.category }}">{{ project.name }}</option>
                                         {% endfor %}
                                     </select>
                                     <a href="{% url 'tracker:project_create' %}?next={{ request.path }}" class="btn btn-outline-secondary" role="button">+</a>
@@ -114,25 +117,54 @@
         const categoryRadios = document.querySelectorAll('input[name="category"]');
         const projectSelect = document.getElementById('project');
         const projectOptions = Array.from(projectSelect.options);
+        const noProjectOption = projectSelect.querySelector('option[value=""]');
 
         function filterProjects() {
             const selectedCategory = document.querySelector('input[name="category"]:checked').value;
-            let currentProjectValue = projectSelect.value;
+            const newProjectId = projectSelect.dataset.newProjectId;
 
+            let visibleProjects = [];
+
+            // First, show/hide projects based on the selected category
             projectOptions.forEach(option => {
-                if (option.value === "") { // Always show "No Project"
+                if (option.value === "") return; // Skip the "No Project" option for now
+
+                if (option.dataset.category === selectedCategory) {
                     option.style.display = '';
-                } else if (option.dataset.category === selectedCategory) {
-                    option.style.display = '';
+                    visibleProjects.push(option);
                 } else {
                     option.style.display = 'none';
                 }
             });
 
-            // If the currently selected project is now hidden, reset to "No Project"
-            const selectedOption = projectSelect.querySelector(`option[value="${currentProjectValue}"]`);
-            if (selectedOption && selectedOption.style.display === 'none') {
-                projectSelect.value = '';
+            // Now, handle the "No Project" option and default selection
+            if (visibleProjects.length === 0) {
+                noProjectOption.style.display = '';
+                projectSelect.value = ''; // Select "No Project"
+            } else {
+                noProjectOption.style.display = 'none'; // Hide "No Project" if there are other options
+
+                let projectIdToSelect = '';
+                const newProjectOption = document.querySelector(`option[value="${newProjectId}"][data-category="${selectedCategory}"]`);
+
+                if (newProjectId && newProjectOption) {
+                    projectIdToSelect = newProjectId;
+                    projectSelect.dataset.newProjectId = ''; // Clear after use
+                } else if (selectedCategory === 'work') {
+                    projectIdToSelect = projectSelect.dataset.latestWorkProject;
+                } else if (selectedCategory === 'personal') {
+                    projectIdToSelect = projectSelect.dataset.latestPersonalProject;
+                }
+
+                // Set the project value. Check if the intended project is actually in the visible list.
+                const isProjectVisible = visibleProjects.some(opt => opt.value === projectIdToSelect);
+
+                if (projectIdToSelect && isProjectVisible) {
+                    projectSelect.value = projectIdToSelect;
+                } else if (visibleProjects.length > 0) {
+                    // Fallback to the first visible project in the list
+                    projectSelect.value = visibleProjects[0].value;
+                }
             }
         }
 
