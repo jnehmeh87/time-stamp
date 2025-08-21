@@ -82,27 +82,12 @@
         crossorigin="anonymous"></script>
     
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Set timezone cookie
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    document.cookie = "timezone=" + tz + ";path=/;max-age=2592000"; // 30 days
-
-    // Convert UTC dates to local time
-    document.querySelectorAll('[data-utc-date]').forEach(function(element) {
-        const utcDate = new Date(element.dataset.utcDate);
-        element.textContent = utcDate.toLocaleString();
-    });
-
-    // Add confirmation prompts to forms
-    document.querySelectorAll('form[data-confirm-message]').forEach(function(form) {
-        form.addEventListener('submit', function(event) {
-            if (!confirm(form.dataset.confirmMessage)) {
-                event.preventDefault();
-            }
-        });
-    });
-});
+  (function() {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    document.cookie = `timezone=${timezone};path=/;max-age=31536000;samesite=Lax`;
+  })();
 </script>
+
 {% block extra_js %}{% endblock %}
 </body>
 </html>

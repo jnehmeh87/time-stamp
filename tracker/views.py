@@ -13,6 +13,7 @@ from django.db.models import Sum, F, Min, Max
 from datetime import timedelta, date
 import csv
 from django.http import HttpResponse, JsonResponse
+from urllib.parse import urlencode
 from googletrans import Translator, LANGUAGES
 from .utils import render_to_pdf
 
@@ -233,6 +234,14 @@ class ProjectCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.user = self.request.user
+        self.object = form.save()
+        next_url = self.request.GET.get('next')
+        if next_url:
+            params = urlencode({
+                'new_project_id': self.object.pk,
+                'new_category': self.object.category
+            })
+            return redirect(f"{next_url}?{params}")
         return super().form_valid(form)
 
 class ProjectUpdateView(LoginRequiredMixin, UpdateView):
