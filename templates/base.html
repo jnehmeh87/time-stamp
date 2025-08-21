@@ -9,9 +9,42 @@
           integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN"
           crossorigin="anonymous">
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <style>
+        .toast-container {
+            position: fixed;
+            top: 70px; /* Position below the navbar */
+            right: 20px;
+            z-index: 1055; /* Ensure it's above other content */
+        }
+        .toast-custom {
+            opacity: 1;
+            transition: opacity 0.5s ease-in-out;
+        }
+        .toast-custom.fade-out {
+            opacity: 0;
+        }
+        /* Hide toasts on mobile devices */
+        @media (max-width: 767.98px) {
+            .toast-container {
+                display: none;
+            }
+        }
+    </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body class="d-flex flex-column h-100">
+<!-- Toast Notification Container -->
+<div class="toast-container">
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show toast-custom" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+</div>
+
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
         <div class="container">
             <a class="navbar-brand" href="{% url 'tracker:home' %}">Time Stamp</a>
@@ -54,40 +87,49 @@
         </div>
     </nav>
 
-<main class="container py-4 flex-grow-1">
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        {% endfor %}
-    {% endif %}
-    
-    {% block content %}{% endblock %}
-</main>
+    <main class="container py-4 flex-grow-1">
+        {% block content %}{% endblock %}
+    </main>
 
-<footer class="bg-dark text-light py-3 mt-auto">
-  <div class="container small d-flex flex-column flex-md-row justify-content-between">
-      <div>&copy; {% now "Y" %} TimeStamp</div>
-      <div>
-          <span class="text-secondary">Built for productivity</span>
+    <footer class="bg-dark text-light py-3 mt-auto">
+      <div class="container small d-flex flex-column flex-md-row justify-content-between">
+          <div>&copy; {% now "Y" %} TimeStamp</div>
+          <div>
+              <span class="text-secondary">Built for productivity</span>
+          </div>
       </div>
-  </div>
-</footer>
+    </footer>
 
-<!-- Bootstrap Bundle (includes Popper) -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
-        integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
-        crossorigin="anonymous"></script>
-    
-<script>
-  (function() {
-    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    document.cookie = `timezone=${timezone};path=/;max-age=31536000;samesite=Lax`;
-  })();
-</script>
+    <!-- Bootstrap Bundle (includes Popper) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+            integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+            crossorigin="anonymous"></script>
+        
+    <script>
+      (function() {
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        document.cookie = `timezone=${timezone};path=/;max-age=31536000;samesite=Lax`;
+      })();
 
-{% block extra_js %}{% endblock %}
+      // Auto-dismiss toast notifications
+      document.addEventListener('DOMContentLoaded', function() {
+        const toasts = document.querySelectorAll('.toast-custom');
+        toasts.forEach(toast => {
+            setTimeout(() => {
+                // Use Bootstrap's built-in dismiss functionality if available
+                const bsAlert = new bootstrap.Alert(toast);
+                if (bsAlert) {
+                    bsAlert.close();
+                } else {
+                    // Fallback for manual removal
+                    toast.classList.add('fade-out');
+                    setTimeout(() => toast.remove(), 500); // Remove from DOM after fade
+                }
+            }, 3000); // 3 seconds
+        });
+      });
+    </script>
+
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

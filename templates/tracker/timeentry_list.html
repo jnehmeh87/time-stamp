@@ -6,6 +6,14 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1>My Time Entries</h1>
+    <div class="btn-group" role="group" aria-label="View switcher">
+        <button type="button" class="btn btn-outline-secondary active" id="table-view-btn" title="List View">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-list-ul" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M5 11.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m-3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2m0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2m0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/></svg>
+        </button>
+        <button type="button" class="btn btn-outline-secondary" id="card-view-btn" title="Card View">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-grid-3x2-gap-fill" viewBox="0 0 16 16"><path d="M1 4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1zM1 9a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1z"/></svg>
+        </button>
+    </div>
 </div>
 
 <!-- Desktop Filter (Visible on LG screens and up) -->
@@ -90,7 +98,7 @@
 </div>
 
 <form method="get" id="bulk-action-form">
-    <div class="card">
+    <div class="card mb-3">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-2 gap-2">
                 <div class="form-check">
@@ -108,54 +116,106 @@
                     <button type="submit" class="btn btn-danger" id="bulk-delete-btn" disabled formaction="{% url 'tracker:entry_bulk_delete_confirm' %}">Delete</button>
                 </div>
             </div>
-            <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead>
-                        <tr>
-                            <th></th><!-- Checkbox column -->
-                            <th>Title</th>
-                            <th>Project</th>
-                            <th>Description</th>
-                            <th>Notes</th>
-                            <th>Image</th>
-                            <th>Date</th>
-                            <th>Start Time</th>
-                            <th>End Time</th>
-                            <th>Duration</th>
-                            <th>Category</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for entry in entries %}
-                        <tr class="{% if entry.is_archived %}table-secondary text-muted{% endif %}">
-                            <td><input class="form-check-input entry-checkbox" type="checkbox" name="selected_entries" value="{{ entry.pk }}"></td>
-                            <td><a href="{% url 'tracker:entry_update' entry.pk %}">{{ entry.title }}</a></td>
-                            <td>{{ entry.project.name|default:"-" }}</td>
-                            <td>{{ entry.description|truncatechars:30|default:"-" }}</td>
-                            <td>{{ entry.notes|truncatechars:30|default:"-" }}</td>
-                            <td>
-                                {% if entry.image %}
-                                    <a href="{{ entry.image.url }}" target="_blank">
-                                        <img src="{{ entry.image.url }}" alt="{{ entry.title }} image" style="max-width: 50px; max-height: 50px; object-fit: cover;">
-                                    </a>
-                                {% else %}
-                                    -
-                                {% endif %}
-                            </td>
-                            <td>{{ entry.start_time|date:"D j/n/Y" }}</td>
-                            <td>{{ entry.start_time|date:"g:i:s A" }}</td>
-                            <td>{{ entry.end_time|date:"g:i:s A" }}</td>
-                            <td>{{ entry.duration|human_duration }}</td>
-                            <td>{{ entry.get_category_display }}</td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="11" class="text-center">No time entries found.</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+            
+            <!-- Table View Container -->
+            <div id="table-view-container">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th></th><!-- Checkbox column -->
+                                <th>Title</th>
+                                <th>Project</th>
+                                <th>Description</th>
+                                <th>Notes</th>
+                                <th>Image</th>
+                                <th>Date</th>
+                                <th>Start Time</th>
+                                <th>End Time</th>
+                                <th>Duration</th>
+                                <th>Category</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in entries %}
+                            <tr class="{% if entry.is_archived %}table-secondary text-muted{% endif %}">
+                                <td><input class="form-check-input entry-checkbox" type="checkbox" name="selected_entries" value="{{ entry.pk }}"></td>
+                                <td><a href="{% url 'tracker:entry_update' entry.pk %}">{{ entry.title }}</a></td>
+                                <td>{{ entry.project.name|default:"-" }}</td>
+                                <td>{{ entry.description|truncatechars:30|default:"-" }}</td>
+                                <td>{{ entry.notes|truncatechars:30|default:"-" }}</td>
+                                <td>
+                                    {% if entry.image %}
+                                        <a href="{{ entry.image.url }}" target="_blank">
+                                            <img src="{{ entry.image.url }}" alt="{{ entry.title }} image" style="max-width: 50px; max-height: 50px; object-fit: cover;">
+                                        </a>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>{{ entry.start_time|date:"D j/n/Y" }}</td>
+                                <td>{{ entry.start_time|date:"g:i:s A" }}</td>
+                                <td>{{ entry.end_time|date:"g:i:s A" }}</td>
+                                <td>{{ entry.duration|human_duration }}</td>
+                                <td>{{ entry.get_category_display }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="11" class="text-center">No time entries found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
+
+            <!-- Card View Container -->
+            <div id="card-view-container" class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3" style="display: none;">
+                {% for entry in entries %}
+                <div class="col">
+                    <div class="card h-100 {% if entry.is_archived %}bg-light text-muted{% endif %}">
+                        {% with entry.images.first as first_image %}
+                            {% if first_image %}
+                                <a href="{{ first_image.image.url }}" target="_blank">
+                                    <img src="{{ first_image.image.url }}" class="card-img-top" alt="{{ entry.title }} image" style="height: 180px; object-fit: cover;">
+                                </a>
+                            {% endif %}
+                        {% endwith %}
+                        <div class="card-header d-flex justify-content-between align-items-start">
+                            <input class="form-check-input entry-checkbox mt-1" type="checkbox" name="selected_entries" value="{{ entry.pk }}">
+                            <a href="{% url 'tracker:entry_update' entry.pk %}" class="text-decoration-none text-reset flex-grow-1 ms-2">
+                                <h5 class="mb-0">{{ entry.title }}</h5>
+                            </a>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">
+                                <strong>Project:</strong> {{ entry.project.name|default:"-" }}<br>
+                                <strong>Category:</strong> {{ entry.get_category_display }}
+                            </p>
+                            {% if entry.description %}
+                                <p class="card-text small"><strong>Description:</strong> {{ entry.description|truncatechars:100 }}</p>
+                            {% endif %}
+                            {% if entry.notes %}
+                                <p class="card-text small"><strong>Notes:</strong> {{ entry.notes|truncatechars:100 }}</p>
+                            {% endif %}
+                            <p class="card-text small text-muted">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" class="bi bi-calendar-event me-1" viewBox="0 0 16 16"><path d="M11 6.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5z"/><path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5M1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4z"/></svg>
+                                {{ entry.start_time|date:"D, j M Y" }}
+                                <br>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" class="bi bi-clock me-1" viewBox="0 0 16 16"><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0"/></svg>
+                                {{ entry.start_time|date:"g:i:s A" }} - {{ entry.end_time|date:"g:i:s A" }}
+                                  |  <span class="badge bg-secondary">{{ entry.duration|human_duration }}</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                    <div class="col-12">
+                        <p class="text-center">No time entries found.</p>
+                    </div>
+                {% endfor %}
+            </div>
+
         </div>
     </div>
 </form>
@@ -224,6 +284,44 @@
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // --- View Toggler ---
+    const tableViewBtn = document.getElementById('table-view-btn');
+    const cardViewBtn = document.getElementById('card-view-btn');
+    const tableContainer = document.getElementById('table-view-container');
+    const cardContainer = document.getElementById('card-view-container');
+
+    function setView(view) {
+        if (view === 'card') {
+            tableContainer.style.display = 'none';
+            cardContainer.style.display = 'flex'; // Use flex for proper row wrapping
+            tableViewBtn.classList.remove('active');
+            cardViewBtn.classList.add('active');
+            localStorage.setItem('timeEntryView', 'card');
+        } else {
+            tableContainer.style.display = 'block';
+            cardContainer.style.display = 'none';
+            tableViewBtn.classList.add('active');
+            cardViewBtn.classList.remove('active');
+            localStorage.setItem('timeEntryView', 'table');
+        }
+    }
+
+    tableViewBtn.addEventListener('click', () => setView('table'));
+    cardViewBtn.addEventListener('click', () => setView('card'));
+
+    // Restore user's preferred view on page load, or set default based on screen size
+    const preferredView = localStorage.getItem('timeEntryView');
+    if (preferredView) {
+        setView(preferredView);
+    } else {
+        // If no preference is stored, default to card view on smaller screens (Bootstrap's lg breakpoint)
+        if (window.innerWidth < 992) {
+            setView('card');
+        } else {
+            setView('table'); // Default to table view on larger screens
+        }
+    }
+
     // --- Mobile Filter Icon Toggle ---
     const filterCollapseElement = document.getElementById('filter-collapse-mobile');
     if (filterCollapseElement) {
@@ -236,8 +334,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // --- Bulk Action Logic (Preserved) ---
+    // --- Bulk Action Logic ---
     const selectAllCheckbox = document.getElementById('select-all-entries');
+    // Select checkboxes from both views
     const entryCheckboxes = document.querySelectorAll('.entry-checkbox');
     const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
     const bulkArchiveBtn = document.getElementById('bulk-archive-btn');
