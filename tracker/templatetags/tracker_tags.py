@@ -31,3 +31,23 @@ def human_duration(duration):
         parts.append(f"{seconds}s")
 
     return " ".join(parts)
+
+@register.simple_tag
+def url_replace(request, field, value, direction_field):
+    """
+    A template tag to help with building sorting URLs that preserve other GET parameters.
+    """
+    dict_ = request.GET.copy()
+    
+    # If the sort field is the same as the current one, toggle the direction
+    if dict_.get(field) == value:
+        if dict_.get(direction_field) == 'asc':
+            dict_[direction_field] = 'desc'
+        else:
+            dict_[direction_field] = 'asc'
+    # Otherwise, set a new sort field and default to ascending
+    else:
+        dict_[field] = value
+        dict_[direction_field] = 'asc'
+        
+    return dict_.urlencode()

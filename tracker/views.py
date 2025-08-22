@@ -92,6 +92,13 @@ class TimeEntryListView(LoginRequiredMixin, ListView):
         queryset = super().get_queryset().filter(user=self.request.user)
         self.filter_form = TimeEntryFilterForm(self.request.GET)
 
+        # Annotate with duration for sorting
+        queryset = queryset.annotate(duration_calc=F('end_time') - F('start_time'))
+
+        project_id = self.request.GET.get('project')
+        if project_id:
+            queryset = queryset.filter(project_id=project_id)
+
         if self.filter_form.is_valid():
             start_date = self.filter_form.cleaned_data.get('start_date')
             if start_date:
@@ -112,11 +119,46 @@ class TimeEntryListView(LoginRequiredMixin, ListView):
         else:
             queryset = queryset.filter(is_archived=False)
 
-        return queryset.order_by('-start_time')
+        # Sorting logic
+        sort_by = self.request.GET.get('sort_by', 'start_time') # Default sort
+        sort_dir = self.request.GET.get('sort_dir', 'desc')
+        
+        valid_sort_fields = ['title', 'project__name', 'start_time', 'end_time', 'duration', 'category']
+        
+        # Map the 'duration' sort field to our calculated field
+        sort_field_db = 'duration_calc' if sort_by == 'duration' else sort_by
+
+        if sort_by in valid_sort_fields:
+            if sort_dir == 'desc':
+                sort_field_db = f'-{sort_field_db}'
+            queryset = queryset.order_by(sort_field_db)
+        else:
+            queryset = queryset.order_by('-start_time')
+
+
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['filter_form'] = self.filter_form.cleaned_data if self.filter_form.is_valid() else {}
+        
+        # Prepare data for the template
+        filter_data = self.filter_form.cleaned_data if self.filter_form.is_valid() else {}
+        selected_project_id = self.request.GET.get('project')
+        if selected_project_id:
+            filter_data['project'] = selected_project_id
+        context['filter_form'] = filter_data
+
+        # Pass sorting info to template
+        context['sort_by'] = self.request.GET.get('sort_by', 'start_time')
+        context['sort_dir'] = self.request.GET.get('sort_dir', 'desc')
+
+        # Data for dynamic project dropdown
+        context['all_projects'] = Project.objects.filter(user=self.request.user)
+        latest_work_entry = TimeEntry.objects.filter(user=self.request.user, category='work', project__isnull=False).order_by('-start_time').first()
+        latest_personal_entry = TimeEntry.objects.filter(user=self.request.user, category='personal', project__isnull=False).order_by('-start_time').first()
+        context['latest_work_project_id'] = latest_work_entry.project.id if latest_work_entry else None
+        context['latest_personal_project_id'] = latest_personal_entry.project.id if latest_personal_entry else None
+
         return context
 
 class TimeEntryCreateView(LoginRequiredMixin, CreateView):

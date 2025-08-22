@@ -21,11 +21,11 @@
     <div class="card-header">Filters</div>
     <div class="card-body">
         <form method="get" class="row g-3 align-items-end">
-            <div class="col-lg-3">
+            <div class="col-lg-2">
                 <label for="start_date_desktop" class="form-label">Start Date</label>
                 <input type="date" name="start_date" id="start_date_desktop" class="form-control" value="{{ filter_form.start_date|default:'' }}">
             </div>
-            <div class="col-lg-3">
+            <div class="col-lg-2">
                 <label for="end_date_desktop" class="form-label">End Date</label>
                 <input type="date" name="end_date" id="end_date_desktop" class="form-control" value="{{ filter_form.end_date|default:'' }}">
             </div>
@@ -35,6 +35,17 @@
                     <option value="">All</option>
                     <option value="work" {% if filter_form.category == 'work' %}selected{% endif %}>Work</option>
                     <option value="personal" {% if filter_form.category == 'personal' %}selected{% endif %}>Personal</option>
+                </select>
+            </div>
+            <div class="col-lg-2">
+                <label for="project_desktop" class="form-label">Project</label>
+                <select name="project" id="project_desktop" class="form-select">
+                    <option value="">All Projects</option>
+                    {% for project in all_projects %}
+                        <option value="{{ project.pk }}" data-category="{{ project.category }}" {% if project.pk|stringformat:"s" == filter_form.project %}selected{% endif %}>
+                            {{ project.name }}
+                        </option>
+                    {% endfor %}
                 </select>
             </div>
             <div class="col-lg-2">
@@ -82,6 +93,19 @@
                     </select>
                 </div>
                 <div class="col-12">
+                    <label for="project_mobile" class="form-label">Project</label>
+                    <select name="project" id="project_mobile" class="form-select" 
+                            data-latest-work-project="{{ latest_work_project_id|default:'' }}" 
+                            data-latest-personal-project="{{ latest_personal_project_id|default:'' }}">
+                        <option value="">All Projects</option>
+                        {% for project in all_projects %}
+                            <option value="{{ project.pk }}" data-category="{{ project.category }}" {% if project.pk|stringformat:"s" == filter_form.project %}selected{% endif %}>
+                                {{ project.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12">
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" name="show_archived" id="show_archived_mobile" value="on" {% if filter_form.show_archived %}checked{% endif %}>
                         <label class="form-check-label" for="show_archived_mobile">
@@ -122,29 +146,53 @@
                 <div class="table-responsive">
                     <table class="table table-striped table-hover">
                         <thead>
-                            <tr>
-                                <th></th><!-- Checkbox column -->
-                                <th>Title</th>
-                                <th>Project</th>
-                                <th>Description</th>
-                                <th>Notes</th>
-                                <th>Image</th>
-                                <th>Date</th>
-                                <th>Start Time</th>
-                                <th>End Time</th>
-                                <th>Duration</th>
-                                <th>Category</th>
+                            <tr id="sortable-headers">
+                                <th data-column-id="checkbox"></th><!-- Checkbox column -->
+                                <th class="text-center" data-column-id="task">
+                                    <a href="?{% url_replace request 'sort_by' 'title' 'sort_dir' %}" class="text-decoration-none text-reset">
+                                        Task {% if sort_by == 'title' %}{% if sort_dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}{% endif %}
+                                    </a>
+                                </th>
+                                <th class="text-center" data-column-id="duration">
+                                     <a href="?{% url_replace request 'sort_by' 'duration' 'sort_dir' %}" class="text-decoration-none text-reset">
+                                        Duration {% if sort_by == 'duration' %}{% if sort_dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}{% endif %}
+                                    </a>
+                                </th>
+                                <th class="text-center" data-column-id="date">
+                                     <a href="?{% url_replace request 'sort_by' 'start_time' 'sort_dir' %}" class="text-decoration-none text-reset">
+                                        Date {% if sort_by == 'start_time' %}{% if sort_dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}{% endif %}
+                                    </a>
+                                </th>
+                                <th class="text-center" data-column-id="project">
+                                     <a href="?{% url_replace request 'sort_by' 'project__name' 'sort_dir' %}" class="text-decoration-none text-reset">
+                                        Project {% if sort_by == 'project__name' %}{% if sort_dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}{% endif %}
+                                    </a>
+                                </th>
+                                <th class="text-center" data-column-id="start_time">Start Time</th>
+                                <th class="text-center" data-column-id="end_time">End Time</th>
+                                <th class="text-center" data-column-id="description">Description</th>
+                                <th class="text-center" data-column-id="notes">Notes</th>
+                                <th class="text-center" data-column-id="image">Image</th>
+                                <th class="text-center" data-column-id="category">
+                                     <a href="?{% url_replace request 'sort_by' 'category' 'sort_dir' %}" class="text-decoration-none text-reset">
+                                        Category {% if sort_by == 'category' %}{% if sort_dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}{% endif %}
+                                    </a>
+                                </th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="table-body">
                             {% for entry in entries %}
                             <tr class="{% if entry.is_archived %}table-secondary text-muted{% endif %}">
-                                <td><input class="form-check-input entry-checkbox" type="checkbox" name="selected_entries" value="{{ entry.pk }}"></td>
-                                <td><a href="{% url 'tracker:entry_update' entry.pk %}">{{ entry.title }}</a></td>
-                                <td>{{ entry.project.name|default:"-" }}</td>
-                                <td>{{ entry.description|truncatechars:30|default:"-" }}</td>
-                                <td>{{ entry.notes|truncatechars:30|default:"-" }}</td>
-                                <td>
+                                <td class="text-center" data-column-id="checkbox"><input class="form-check-input entry-checkbox" type="checkbox" name="selected_entries" value="{{ entry.pk }}"></td>
+                                <td class="text-center" data-column-id="task"><a href="{% url 'tracker:entry_update' entry.pk %}">{{ entry.title }}</a></td>
+                                <td class="text-center" data-column-id="duration">{{ entry.duration|human_duration }}</td>
+                                <td class="text-center" data-column-id="date">{{ entry.start_time|date:"D j/n/Y" }}</td>
+                                <td class="text-center" data-column-id="project">{{ entry.project.name|default:"-" }}</td>
+                                <td class="text-center" data-column-id="start_time">{{ entry.start_time|date:"g:i:s A" }}</td>
+                                <td class="text-center" data-column-id="end_time">{{ entry.end_time|date:"g:i:s A" }}</td>
+                                <td class="text-center" data-column-id="description">{{ entry.description|truncatechars:30|default:"-" }}</td>
+                                <td class="text-center" data-column-id="notes">{{ entry.notes|truncatechars:30|default:"-" }}</td>
+                                <td class="text-center" data-column-id="image">
                                     {% if entry.image %}
                                         <a href="{{ entry.image.url }}" target="_blank">
                                             <img src="{{ entry.image.url }}" alt="{{ entry.title }} image" style="max-width: 50px; max-height: 50px; object-fit: cover;">
@@ -153,11 +201,7 @@
                                         -
                                     {% endif %}
                                 </td>
-                                <td>{{ entry.start_time|date:"D j/n/Y" }}</td>
-                                <td>{{ entry.start_time|date:"g:i:s A" }}</td>
-                                <td>{{ entry.end_time|date:"g:i:s A" }}</td>
-                                <td>{{ entry.duration|human_duration }}</td>
-                                <td>{{ entry.get_category_display }}</td>
+                                <td class="text-center" data-column-id="category">{{ entry.get_category_display }}</td>
                             </tr>
                             {% empty %}
                             <tr>
@@ -281,9 +325,61 @@
         font-size: 0.875rem;
     }
 }
+
+.table th:hover {
+    cursor: grab;
+}
+.table th a {
+    color: inherit;
+    text-decoration: none;
+}
+.table th a:hover {
+    color: inherit;
+}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // --- Column Reordering & Persistence ---
+    const headerRow = document.getElementById('sortable-headers');
+    const tableBody = document.getElementById('table-body');
+    const storageKey = 'timeEntryTableColumnOrder';
+
+    // Function to apply a specific column order
+    function applyColumnOrder(order) {
+        if (!order || !tableBody) return;
+        
+        const headers = Array.from(headerRow.children);
+        const newHeaderOrder = order.map(id => headers.find(h => h.dataset.columnId === id));
+        headerRow.replaceChildren(...newHeaderOrder);
+
+        Array.from(tableBody.rows).forEach(row => {
+            if (row.children.length > 1) { // Skip the "No entries found" row
+                const cells = Array.from(row.children);
+                const newCellOrder = order.map(id => cells.find(c => c.dataset.columnId === id));
+                row.replaceChildren(...newCellOrder);
+            }
+        });
+    }
+
+    // Load and apply saved order on page load
+    const savedOrder = JSON.parse(localStorage.getItem(storageKey));
+    if (savedOrder) {
+        applyColumnOrder(savedOrder);
+    }
+
+    // Initialize SortableJS for drag-and-drop
+    if (headerRow) {
+        new Sortable(headerRow, {
+            animation: 150,
+            onEnd: function () {
+                const newOrder = Array.from(this.el.children).map(th => th.dataset.columnId);
+                localStorage.setItem(storageKey, JSON.stringify(newOrder));
+                applyColumnOrder(newOrder);
+            }
+        });
+    }
+
     // --- View Toggler ---
     const tableViewBtn = document.getElementById('table-view-btn');
     const cardViewBtn = document.getElementById('card-view-btn');
@@ -320,6 +416,66 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             setView('table'); // Default to table view on larger screens
         }
+    }
+
+    // --- Desktop Project Filter Logic ---
+    const desktopCategorySelect = document.getElementById('category_desktop');
+    const desktopProjectSelect = document.getElementById('project_desktop');
+
+    if (desktopCategorySelect && desktopProjectSelect) {
+        const desktopProjectOptions = Array.from(desktopProjectSelect.options);
+
+        function filterDesktopProjects() {
+            const selectedCategory = desktopCategorySelect.value;
+            const currentProject = desktopProjectSelect.value;
+
+            desktopProjectOptions.forEach(option => {
+                if (option.value === "" || selectedCategory === "" || option.dataset.category === selectedCategory) {
+                    option.style.display = '';
+                } else {
+                    option.style.display = 'none';
+                }
+            });
+
+            const selectedOption = desktopProjectSelect.querySelector(`option[value="${currentProject}"]`);
+            if (selectedOption && selectedOption.style.display === 'none') {
+                desktopProjectSelect.value = '';
+            }
+        }
+
+        desktopCategorySelect.addEventListener('change', filterDesktopProjects);
+        filterDesktopProjects(); // Initial filter on page load
+    }
+
+    // --- Mobile Project Filter Logic ---
+    const mobileCategorySelect = document.getElementById('category_mobile');
+    const mobileProjectSelect = document.getElementById('project_mobile');
+
+    if (mobileCategorySelect && mobileProjectSelect) {
+        const mobileProjectOptions = Array.from(mobileProjectSelect.options);
+
+        function filterMobileProjects() {
+            const selectedCategory = mobileCategorySelect.value;
+            const currentProject = mobileProjectSelect.value;
+
+            mobileProjectOptions.forEach(option => {
+                if (option.value === "" || selectedCategory === "" || option.dataset.category === selectedCategory) {
+                    option.style.display = '';
+                } else {
+                    option.style.display = 'none';
+                }
+            });
+
+            // If the currently selected project is now hidden, reset to "All Projects"
+            const selectedOption = mobileProjectSelect.querySelector(`option[value="${currentProject}"]`);
+            if (selectedOption && selectedOption.style.display === 'none') {
+                mobileProjectSelect.value = '';
+            }
+        }
+
+        mobileCategorySelect.addEventListener('change', filterMobileProjects);
+        // Initial filter on page load to hide projects that don't match the initial category
+        filterMobileProjects();
     }
 
     // --- Mobile Filter Icon Toggle ---
