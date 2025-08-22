@@ -1,5 +1,7 @@
 from django import forms
-from .models import TimeEntry, Project, TimeEntryImage
+from .models import TimeEntry, Project, TimeEntryImage, CATEGORY_CHOICES
+from django.core.exceptions import ValidationError
+from datetime import date
 
 class MultiImageInput(forms.ClearableFileInput):
     allow_multiple_selected = True
@@ -71,8 +73,8 @@ class TimeEntryFilterForm(forms.Form):
 class ReportForm(forms.Form):
     start_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}))
     end_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}))
-    category = forms.ChoiceField(choices=[('', 'All Categories')] + Project.CATEGORY_CHOICES, required=False, widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_category'}))
-    project = forms.ModelChoiceField(queryset=Project.objects.none(), required=False, empty_label="All Projects", widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_project'}))
+    category = forms.ChoiceField(choices=[('', 'All Categories')] + CATEGORY_CHOICES, required=False, widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_category'}))
+    project = forms.ModelChoiceField(queryset=Project.objects.none(), required=False, widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_project'}))
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)

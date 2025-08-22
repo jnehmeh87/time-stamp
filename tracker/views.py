@@ -154,7 +154,7 @@ class TimeEntryListView(LoginRequiredMixin, ListView):
         sort_by = self.request.GET.get('sort_by', 'start_time') # Default sort
         sort_dir = self.request.GET.get('sort_dir', 'desc')
         
-        valid_sort_fields = ['title', 'project__name', 'start_time', 'end_time', 'duration', 'category']
+        valid_sort_fields = ['title', 'project__name', 'start_time', 'end_time', 'duration', 'category', 'paused_duration']
         
         # Map the 'duration' sort field to our calculated field
         sort_field_db = 'duration_calc' if sort_by == 'duration' else sort_by
@@ -290,13 +290,17 @@ class ProjectListView(LoginRequiredMixin, ListView):
     context_object_name = 'projects'
 
     def get_queryset(self):
-        return super().get_queryset().filter(user=self.request.user)
+        queryset = super().get_queryset().filter(user=self.request.user)
+        if not self.request.GET.get('show_archived'):
+            queryset = queryset.filter(is_archived=False)
+        return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        all_projects = self.get_queryset()
+        all_projects = context['projects']
         context['work_projects'] = all_projects.filter(category='work')
         context['personal_projects'] = all_projects.filter(category='personal')
+        context['show_archived'] = self.request.GET.get('show_archived', False)
         return context
 
 class ProjectCreateView(LoginRequiredMixin, CreateView):
@@ -333,6 +337,41 @@ class ProjectDeleteView(LoginRequiredMixin, DeleteView):
 
     def get_queryset(self):
         return super().get_queryset().filter(user=self.request.user)
+
+@login_required
+def project_archive_confirm(request, pk):
+    project = get_object_or_404(Project, pk=pk, user=request.user)
+    return render(request, 'tracker/project_confirm_archive.html', {'project': project})
+
+@login_required
+def project_unarchive_confirm(request, pk):
+    project = get_object_or_404(Project, pk=pk, user=request.user)
+    return render(request, 'tracker/project_confirm_unarchive.html', {'project': project})
+
+@login_required
+def project_toggle_archive(request, pk):
+    project = get_object_or_404(Project, pk=pk, user=request.user)
+    
+    if request.method == 'POST':
+        # Toggle the project's archive status
+        new_status = not project.is_archived
+        project.is_archived = new_status
+        project.save()
+
+        # Handle cascading archive if the user requested it
+        if new_status and request.POST.get('archive_entries'):
+            project.time_entries.update(is_archived=True)
+            messages.success(request, f"Project '{project.name}' and its time entries have been archived.")
+        # Handle cascading unarchive
+        elif not new_status and request.POST.get('unarchive_entries'):
+            project.time_entries.update(is_archived=False)
+            messages.success(request, f"Project '{project.name}' and its time entries have been unarchived.")
+        else:
+            action = 'archived' if new_status else 'unarchived'
+            messages.success(request, f"Project '{project.name}' has been {action}.")
+            
+    return redirect('tracker:project_list')
+
 
 # --- AJAX Views ---
 
@@ -417,7 +456,8 @@ class ReportView(LoginRequiredMixin, View):
                 user=request.user,
                 start_time__date__gte=start_date,
                 end_time__date__lte=end_date,
-                end_time__isnull=False
+                end_time__isnull=False,
+                is_archived=False  # <-- Add this line
             ).select_related('project')
 
             if project:

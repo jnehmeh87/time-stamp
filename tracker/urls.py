@@ -30,6 +30,9 @@ urlpatterns = [
     path('projects/new/', views.ProjectCreateView.as_view(), name='project_create'),
     path('projects/<int:pk>/update/', views.ProjectUpdateView.as_view(), name='project_update'),
     path('projects/<int:pk>/delete/', views.ProjectDeleteView.as_view(), name='project_delete'),
+    path('projects/<int:pk>/archive/', views.project_archive_confirm, name='project_archive_confirm'),
+    path('projects/<int:pk>/unarchive/', views.project_unarchive_confirm, name='project_unarchive_confirm'),
+    path('projects/<int:pk>/toggle-archive/', views.project_toggle_archive, name='project_toggle_archive'),
 
     # Reports & Analytics
     path('reports/', views.ReportView.as_view(), name='reports'),

@@ -1,26 +1,30 @@
 {% extends "base.html" %}
 
-{% block title %}Confirm Delete{% endblock %}
+{% block title %}Confirm Deletion{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-8 col-lg-6">
-        <div class="card">
-            <div class="card-header">
-                <h3 class="card-title">Confirm Deletion</h3>
-            </div>
-            <div class="card-body">
-                <p>Are you sure you want to delete the project "<strong>{{ object.name }}</strong>"?</p>
-                <p class="text-danger">This action cannot be undone.</p>
-                <form method="post">
-                    {% csrf_token %}
-                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                        <a href="{% url 'tracker:project_list' %}" class="btn btn-secondary">Cancel</a>
-                        <button type="submit" class="btn btn-danger">Yes, Delete</button>
-                    </div>
-                </form>
-            </div>
+<div class="card">
+    <div class="card-header">
+        <h1 class="h3 mb-0">Confirm Deletion</h1>
+    </div>
+    <div class="card-body">
+        <p>Are you sure you want to delete the following project? This action cannot be undone.</p>
+        
+        <ul class="list-group mb-3">
+            <li class="list-group-item">{{ object.name }}</li>
+        </ul>
+
+        <div class="alert alert-danger" role="alert">
+            <strong>Warning:</strong> Deleting this project will also permanently delete all of its associated time entries.
         </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-danger">Yes, delete permanently</button>
+                <a href="{% url 'tracker:project_list' %}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
     </div>
 </div>
 {% endblock %}

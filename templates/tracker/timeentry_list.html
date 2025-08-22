@@ -153,9 +153,9 @@
                                         Task {% if sort_by == 'title' %}{% if sort_dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}{% endif %}
                                     </a>
                                 </th>
-                                <th class="text-center" data-column-id="duration">
-                                     <a href="?{% url_replace request 'sort_by' 'duration' 'sort_dir' %}" class="text-decoration-none text-reset">
-                                        Duration {% if sort_by == 'duration' %}{% if sort_dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}{% endif %}
+                                <th class="text-center" data-column-id="project">
+                                     <a href="?{% url_replace request 'sort_by' 'project__name' 'sort_dir' %}" class="text-decoration-none text-reset">
+                                        Project {% if sort_by == 'project__name' %}{% if sort_dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}{% endif %}
                                     </a>
                                 </th>
                                 <th class="text-center" data-column-id="date">
@@ -163,21 +163,25 @@
                                         Date {% if sort_by == 'start_time' %}{% if sort_dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}{% endif %}
                                     </a>
                                 </th>
-                                <th class="text-center" data-column-id="project">
-                                     <a href="?{% url_replace request 'sort_by' 'project__name' 'sort_dir' %}" class="text-decoration-none text-reset">
-                                        Project {% if sort_by == 'project__name' %}{% if sort_dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}{% endif %}
+                                <th class="text-center" data-column-id="start_time">Time Details</th>
+                                <th class="text-center" data-column-id="duration">
+                                     <a href="?{% url_replace request 'sort_by' 'duration' 'sort_dir' %}" class="text-decoration-none text-reset">
+                                        Duration {% if sort_by == 'duration' %}{% if sort_dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}{% endif %}
                                     </a>
                                 </th>
-                                <th class="text-center" data-column-id="start_time">Start Time</th>
-                                <th class="text-center" data-column-id="end_time">End Time</th>
-                                <th class="text-center" data-column-id="description">Description</th>
-                                <th class="text-center" data-column-id="notes">Notes</th>
-                                <th class="text-center" data-column-id="image">Image</th>
+                                <th class="text-center" data-column-id="paused_time">
+                                     <a href="?{% url_replace request 'sort_by' 'paused_duration' 'sort_dir' %}" class="text-decoration-none text-reset">
+                                        Paused Time {% if sort_by == 'paused_duration' %}{% if sort_dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}{% endif %}
+                                    </a>
+                                </th>
                                 <th class="text-center" data-column-id="category">
                                      <a href="?{% url_replace request 'sort_by' 'category' 'sort_dir' %}" class="text-decoration-none text-reset">
                                         Category {% if sort_by == 'category' %}{% if sort_dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}{% endif %}
                                     </a>
                                 </th>
+                                <th class="text-center" data-column-id="description">Description</th>
+                                <th class="text-center" data-column-id="notes">Notes</th>
+                                <th class="text-center" data-column-id="image">Image</th>
                             </tr>
                         </thead>
                         <tbody id="table-body">
@@ -185,11 +189,12 @@
                             <tr class="{% if entry.is_archived %}table-secondary text-muted{% endif %}">
                                 <td class="text-center" data-column-id="checkbox"><input class="form-check-input entry-checkbox" type="checkbox" name="selected_entries" value="{{ entry.pk }}"></td>
                                 <td class="text-center" data-column-id="task"><a href="{% url 'tracker:entry_update' entry.pk %}">{{ entry.title }}</a></td>
-                                <td class="text-center" data-column-id="duration">{{ entry.duration|human_duration }}</td>
-                                <td class="text-center" data-column-id="date">{{ entry.start_time|date:"D j/n/Y" }}</td>
                                 <td class="text-center" data-column-id="project">{{ entry.project.name|default:"-" }}</td>
-                                <td class="text-center" data-column-id="start_time">{{ entry.start_time|date:"g:i:s A" }}</td>
-                                <td class="text-center" data-column-id="end_time">{{ entry.end_time|date:"g:i:s A" }}</td>
+                                <td class="text-center" data-column-id="date">{{ entry.start_time|date:"D j/n/Y" }}</td>
+                                <td class="text-center" data-column-id="start_time">{{ entry.start_time|date:"g:i A" }} - {{ entry.end_time|date:"g:i A" }}</td>
+                                <td class="text-center" data-column-id="duration">{{ entry.duration|human_duration }}</td>
+                                <td class="text-center" data-column-id="paused_time">{{ entry.paused_duration|human_duration }}</td>
+                                <td class="text-center" data-column-id="category">{{ entry.get_category_display }}</td>
                                 <td class="text-center" data-column-id="description">{{ entry.description|truncatechars:30|default:"-" }}</td>
                                 <td class="text-center" data-column-id="notes">{{ entry.notes|truncatechars:30|default:"-" }}</td>
                                 <td class="text-center" data-column-id="image">
@@ -201,11 +206,10 @@
                                         -
                                     {% endif %}
                                 </td>
-                                <td class="text-center" data-column-id="category">{{ entry.get_category_display }}</td>
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="11" class="text-center">No time entries found.</td>
+                                <td colspan="12" class="text-center">No time entries found.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -234,7 +238,11 @@
                         <div class="card-body">
                             <p class="card-text">
                                 <strong>Project:</strong> {{ entry.project.name|default:"-" }}<br>
-                                <strong>Category:</strong> {{ entry.get_category_display }}
+                                <strong>Category:</strong> {{ entry.get_category_display }}<br>
+                                <span class="badge bg-success">Duration: {{ entry.duration|human_duration }}</span>
+                                {% if entry.paused_duration %}
+                                  |  <span class="badge bg-warning text-dark">Pause: {{ entry.paused_duration|human_duration }}</span>
+                                {% endif %}
                             </p>
                             {% if entry.description %}
                                 <p class="card-text small"><strong>Description:</strong> {{ entry.description|truncatechars:100 }}</p>
@@ -248,7 +256,7 @@
                                 <br>
                                 <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" class="bi bi-clock me-1" viewBox="0 0 16 16"><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0"/></svg>
                                 {{ entry.start_time|date:"g:i:s A" }} - {{ entry.end_time|date:"g:i:s A" }}
-                                  |  <span class="badge bg-secondary">{{ entry.duration|human_duration }}</span>
+                                <br>
                             </p>
                         </div>
                     </div>
@@ -347,25 +355,33 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to apply a specific column order
     function applyColumnOrder(order) {
-        if (!order || !tableBody) return;
+        if (!order || !tableBody || !headerRow) return;
         
         const headers = Array.from(headerRow.children);
-        const newHeaderOrder = order.map(id => headers.find(h => h.dataset.columnId === id));
+        const newHeaderOrder = order.map(id => headers.find(h => h.dataset.columnId === id)).filter(Boolean); // .filter(Boolean) removes undefined
         headerRow.replaceChildren(...newHeaderOrder);
 
         Array.from(tableBody.rows).forEach(row => {
             if (row.children.length > 1) { // Skip the "No entries found" row
                 const cells = Array.from(row.children);
-                const newCellOrder = order.map(id => cells.find(c => c.dataset.columnId === id));
+                const newCellOrder = order.map(id => cells.find(c => c.dataset.columnId === id)).filter(Boolean);
                 row.replaceChildren(...newCellOrder);
             }
         });
     }
 
-    // Load and apply saved order on page load
+    // --- Smartly Load and Apply Column Order ---
     const savedOrder = JSON.parse(localStorage.getItem(storageKey));
-    if (savedOrder) {
+    const currentColumns = Array.from(headerRow.children).map(th => th.dataset.columnId);
+
+    // Check if the saved order is valid (same columns)
+    const isOrderValid = savedOrder && savedOrder.length === currentColumns.length && savedOrder.every(id => currentColumns.includes(id));
+
+    if (isOrderValid) {
         applyColumnOrder(savedOrder);
+    } else {
+        // If order is invalid or doesn't exist, clear it from storage
+        localStorage.removeItem(storageKey);
     }
 
     // Initialize SortableJS for drag-and-drop

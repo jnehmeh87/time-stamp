@@ -5,7 +5,13 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1>My Projects</h1>
-    <a href="{% url 'tracker:project_create' %}" class="btn btn-outline-primary">Add Project</a>
+    <div class="d-flex align-items-center gap-2">
+        <form method="get" class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" id="showArchived" name="show_archived" {% if show_archived %}checked{% endif %} onchange="this.form.submit()">
+            <label class="form-check-label" for="showArchived">Show Archived</label>
+        </form>
+        <a href="{% url 'tracker:project_create' %}" class="btn btn-outline-primary">Add Project</a>
+    </div>
 </div>
 
 <!-- Mobile/Tablet Tab View -->
@@ -23,7 +29,7 @@
             {% if work_projects %}
                 <ul class="list-group list-group-flush">
                     {% for project in work_projects %}
-                    <li class="list-group-item">
+                    <li class="list-group-item {% if project.is_archived %}bg-light text-muted{% endif %}">
                         <div class="d-flex justify-content-between align-items-center">
                             <div class="flex-grow-1">
                                 <h5 class="mb-1">{{ project.name }}</h5>
@@ -31,10 +37,12 @@
                             </div>
                             <div class="d-flex align-items-center gap-1 ms-2">
                                 <a href="{% url 'tracker:project_update' project.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
-                                <form action="{% url 'tracker:project_delete' project.pk %}" method="post" onsubmit="return confirm('Are you sure you want to delete the project \'{{ project.name|escapejs }}\'? This will also delete all associated time entries.');">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                                </form>
+                                {% if project.is_archived %}
+                                <a href="{% url 'tracker:project_unarchive_confirm' project.pk %}" class="btn btn-sm btn-outline-success">Unarchive</a>
+                                {% else %}
+                                <a href="{% url 'tracker:project_archive_confirm' project.pk %}" class="btn btn-sm btn-outline-warning">Archive</a>
+                                {% endif %}
+                                <a href="{% url 'tracker:project_delete' project.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
                             </div>
                         </div>
                     </li>
@@ -48,7 +56,7 @@
             {% if personal_projects %}
                 <ul class="list-group list-group-flush">
                     {% for project in personal_projects %}
-                    <li class="list-group-item">
+                    <li class="list-group-item {% if project.is_archived %}bg-light text-muted{% endif %}">
                         <div class="d-flex justify-content-between align-items-center">
                             <div class="flex-grow-1">
                                 <h5 class="mb-1">{{ project.name }}</h5>
@@ -56,10 +64,12 @@
                             </div>
                             <div class="d-flex align-items-center gap-1 ms-2">
                                 <a href="{% url 'tracker:project_update' project.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
-                                <form action="{% url 'tracker:project_delete' project.pk %}" method="post" onsubmit="return confirm('Are you sure you want to delete the project \'{{ project.name|escapejs }}\'? This will also delete all associated time entries.');">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                                </form>
+                                {% if project.is_archived %}
+                                <a href="{% url 'tracker:project_unarchive_confirm' project.pk %}" class="btn btn-sm btn-outline-success">Unarchive</a>
+                                {% else %}
+                                <a href="{% url 'tracker:project_archive_confirm' project.pk %}" class="btn btn-sm btn-outline-warning">Archive</a>
+                                {% endif %}
+                                <a href="{% url 'tracker:project_delete' project.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
                             </div>
                         </div>
                     </li>
@@ -84,7 +94,7 @@
                 {% if work_projects %}
                 <ul class="list-group list-group-flush">
                     {% for project in work_projects %}
-                    <li class="list-group-item">
+                    <li class="list-group-item {% if project.is_archived %}bg-light text-muted{% endif %}">
                         <div class="d-flex justify-content-between align-items-center">
                             <div class="flex-grow-1">
                                 <h5 class="mb-1">{{ project.name }}</h5>
@@ -92,10 +102,12 @@
                             </div>
                             <div class="d-flex align-items-center gap-1 ms-2">
                                 <a href="{% url 'tracker:project_update' project.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
-                                <form action="{% url 'tracker:project_delete' project.pk %}" method="post" onsubmit="return confirm('Are you sure you want to delete the project \'{{ project.name|escapejs }}\'? This will also delete all associated time entries.');">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                                </form>
+                                {% if project.is_archived %}
+                                <a href="{% url 'tracker:project_unarchive_confirm' project.pk %}" class="btn btn-sm btn-outline-success">Unarchive</a>
+                                {% else %}
+                                <a href="{% url 'tracker:project_archive_confirm' project.pk %}" class="btn btn-sm btn-outline-warning">Archive</a>
+                                {% endif %}
+                                <a href="{% url 'tracker:project_delete' project.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
                             </div>
                         </div>
                     </li>
@@ -116,7 +128,7 @@
                 {% if personal_projects %}
                 <ul class="list-group list-group-flush">
                     {% for project in personal_projects %}
-                    <li class="list-group-item">
+                    <li class="list-group-item {% if project.is_archived %}bg-light text-muted{% endif %}">
                         <div class="d-flex justify-content-between align-items-center">
                             <div class="flex-grow-1">
                                 <h5 class="mb-1">{{ project.name }}</h5>
@@ -124,10 +136,12 @@
                             </div>
                             <div class="d-flex align-items-center gap-1 ms-2">
                                 <a href="{% url 'tracker:project_update' project.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
-                                <form action="{% url 'tracker:project_delete' project.pk %}" method="post" onsubmit="return confirm('Are you sure you want to delete the project \'{{ project.name|escapejs }}\'? This will also delete all associated time entries.');">
-                                    {% csrf_token %}
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                                </form>
+                                {% if project.is_archived %}
+                                <a href="{% url 'tracker:project_unarchive_confirm' project.pk %}" class="btn btn-sm btn-outline-success">Unarchive</a>
+                                {% else %}
+                                <a href="{% url 'tracker:project_archive_confirm' project.pk %}" class="btn btn-sm btn-outline-warning">Archive</a>
+                                {% endif %}
+                                <a href="{% url 'tracker:project_delete' project.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
                             </div>
                         </div>
                     </li>

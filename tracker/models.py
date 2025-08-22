@@ -1,57 +1,56 @@
 from django.db import models
 from django.conf import settings
-from django.core.exceptions import ValidationError
 from datetime import timedelta
 
-class Project(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='projects')
-    name = models.CharField(max_length=100)
-    description = models.TextField(blank=True)
-    CATEGORY_CHOICES = [
-        ('work', 'Work'),
-        ('personal', 'Personal'),
-    ]
-    category = models.CharField(max_length=10, choices=CATEGORY_CHOICES, default='work')
+CATEGORY_CHOICES = [
+    ('work', 'Work'),
+    ('personal', 'Personal'),
+]
 
-    class Meta:
-        verbose_name = "Project"
-        verbose_name_plural = "Projects"
-        indexes = [
-            models.Index(fields=['user', 'name']),
-        ]
+class Project(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    name = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    category = models.CharField(max_length=10, choices=CATEGORY_CHOICES, default='work')
+    is_archived = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name
 
 class TimeEntry(models.Model):
-    CATEGORY_CHOICES = [
-        ('work', 'Work'),
-        ('personal', 'Personal'),
-    ]
-
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='time_entries')
-    project = models.ForeignKey(Project, on_delete=models.SET_NULL, null=True, blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, null=True, blank=True, related_name='time_entries')
     title = models.CharField(max_length=200)
+    description = models.TextField(blank=True)
+    notes = models.TextField(blank=True)
     start_time = models.DateTimeField()
     end_time = models.DateTimeField(null=True, blank=True)
-    description = models.TextField(blank=True, help_text="Description of what you achieved.")
-    notes = models.TextField(blank=True, help_text="Notes for the next session.")
-    category = models.CharField(max_length=10, choices=CATEGORY_CHOICES, default='work')
     is_archived = models.BooleanField(default=False)
-    is_hidden = models.BooleanField(default=False)
-    # Fields for pause/resume functionality
+    category = models.CharField(max_length=10, choices=CATEGORY_CHOICES, default='work')
     is_paused = models.BooleanField(default=False)
-    paused_duration = models.DurationField(default=timedelta(0))
     last_pause_time = models.DateTimeField(null=True, blank=True)
+    paused_duration = models.DurationField(default=timedelta(0))
 
     class Meta:
         ordering = ['-start_time']
-        indexes = [
-            models.Index(fields=['user', 'start_time']),
-            models.Index(fields=['user', 'category']),
-            models.Index(fields=['is_archived', 'is_hidden']),
-        ]
 
+    @property
+    def duration(self):
+        if self.end_time:
+            # Ensure paused_duration is not None before subtracting
+            paused_time = self.paused_duration or timedelta(0)
+            return self.end_time - self.start_time - paused_time
+        return None
+    
+    def __str__(self):
+        return f"{self.title} ({self.user.username})"
+
+class TimeEntryImage(models.Model):
+    time_entry = models.ForeignKey(TimeEntry, related_name='images', on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='time_entry_images/')
+
+    def __str__(self):
+        return f"Image for {self.time_entry.title}"
     def __str__(self):
         return f"{self.title} ({self.user.username})"
 
@@ -85,4 +84,5 @@ class TimeEntryImage(models.Model):
         ]
 
     def __str__(self):
+        return f"Image for {self.time_entry.title}"
         return f"Image for {self.time_entry.title}"
