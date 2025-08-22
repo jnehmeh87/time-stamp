@@ -39,6 +39,10 @@ class TimeEntry(models.Model):
     category = models.CharField(max_length=10, choices=CATEGORY_CHOICES, default='work')
     is_archived = models.BooleanField(default=False)
     is_hidden = models.BooleanField(default=False)
+    # Fields for pause/resume functionality
+    is_paused = models.BooleanField(default=False)
+    paused_duration = models.DurationField(default=timedelta(0))
+    last_pause_time = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ['-start_time']
@@ -58,7 +62,8 @@ class TimeEntry(models.Model):
     @property
     def duration(self):
         if self.end_time:
-            return self.end_time - self.start_time
+            total_duration = self.end_time - self.start_time
+            return total_duration - self.paused_duration
         return None
 
     def formatted_duration(self):

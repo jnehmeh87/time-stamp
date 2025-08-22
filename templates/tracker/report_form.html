@@ -153,7 +153,7 @@ document.addEventListener('DOMContentLoaded', function() {
         projectSelect.addEventListener('change', function() {
             const projectId = this.value;
             if (projectId) {
-                fetch(`{% url 'tracker:project_get_dates' %}?project_id=${projectId}`)
+                fetch(`{% url 'tracker:ajax_get_project_dates' %}?project_id=${projectId}`)
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {

@@ -74,10 +74,41 @@ def stop_timer(request):
         with transaction.atomic():
             active_entry = TimeEntry.objects.select_for_update().filter(user=request.user, end_time__isnull=True).first()
             if active_entry:
+                # If the timer is stopped while paused, calculate the final pause duration first
+                if active_entry.is_paused and active_entry.last_pause_time:
+                    pause_duration = timezone.now() - active_entry.last_pause_time
+                    active_entry.paused_duration += pause_duration
+                    active_entry.is_paused = False
+                    active_entry.last_pause_time = None
+
                 active_entry.end_time = timezone.now()
                 active_entry.full_clean()
                 active_entry.save()
                 return redirect('tracker:entry_update', pk=active_entry.pk)
+    return redirect('tracker:home')
+
+@login_required
+def pause_timer(request):
+    if request.method == 'POST':
+        with transaction.atomic():
+            active_entry = TimeEntry.objects.select_for_update().filter(user=request.user, end_time__isnull=True, is_paused=False).first()
+            if active_entry:
+                active_entry.is_paused = True
+                active_entry.last_pause_time = timezone.now()
+                active_entry.save()
+    return redirect('tracker:home')
+
+@login_required
+def resume_timer(request):
+    if request.method == 'POST':
+        with transaction.atomic():
+            active_entry = TimeEntry.objects.select_for_update().filter(user=request.user, end_time__isnull=True, is_paused=True).first()
+            if active_entry and active_entry.last_pause_time:
+                pause_duration = timezone.now() - active_entry.last_pause_time
+                active_entry.paused_duration += pause_duration
+                active_entry.is_paused = False
+                active_entry.last_pause_time = None
+                active_entry.save()
     return redirect('tracker:home')
 
 # --- Time Entry Views ---

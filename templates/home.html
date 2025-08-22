@@ -11,11 +11,30 @@
                 {% if active_entry %}
                     <p class="lead">Timer is running for: <strong>{{ active_entry.title }}</strong></p>
                     <p class="text-muted">Project: {{ active_entry.project.name|default:"None" }} | Category: {{ active_entry.get_category_display }}</p>
-                    <h1 id="timer" class="display-4 my-3" data-starttime="{{ active_entry.start_time.isoformat }}">00:00:00</h1>
-                    <form action="{% url 'tracker:stop_timer' %}" method="post">
-                        {% csrf_token %}
-                        <button type="submit" class="btn btn-danger btn-lg w-100">Stop Timer</button>
-                    </form>
+                    
+                    <h1 id="timer" class="display-4 my-3" 
+                        data-starttime="{{ active_entry.start_time.isoformat }}"
+                        data-is-paused="{{ active_entry.is_paused|yesno:'true,false' }}"
+                        data-paused-duration="{{ active_entry.paused_duration.total_seconds }}"
+                        data-last-pause-time="{{ active_entry.last_pause_time.isoformat|default:'' }}">00:00:00</h1>
+
+                    <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+                        {% if active_entry.is_paused %}
+                            <form action="{% url 'tracker:resume_timer' %}" method="post" class="flex-fill">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-success btn-lg w-100">Resume</button>
+                            </form>
+                        {% else %}
+                            <form action="{% url 'tracker:pause_timer' %}" method="post" class="flex-fill">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-warning btn-lg w-100">Pause</button>
+                            </form>
+                        {% endif %}
+                        <form action="{% url 'tracker:stop_timer' %}" method="post" class="flex-fill">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger btn-lg w-100">Stop Timer</button>
+                        </form>
+                    </div>
                 {% else %}
                     <p class="lead">Start a new time entry.</p>
                     <form action="{% url 'tracker:start_timer' %}" method="post">
@@ -93,19 +112,35 @@
             const timerElement = document.getElementById('timer');
             if (timerElement) {
                 const startTime = new Date(timerElement.dataset.starttime);
+                const isPaused = timerElement.dataset.isPaused === 'true';
+                const pausedDurationSeconds = parseFloat(timerElement.dataset.pausedDuration || 0);
+                const lastPauseTime = timerElement.dataset.lastPauseTime ? new Date(timerElement.dataset.lastPauseTime) : null;
 
                 function updateTimer() {
+                    let elapsedMilliseconds;
                     const now = new Date();
-                    const difference = now - startTime;
 
-                    const hours = String(Math.floor(difference / 3600000)).padStart(2, '0');
-                    const minutes = String(Math.floor((difference % 3600000) / 60000)).padStart(2, '0');
-                    const seconds = String(Math.floor((difference % 60000) / 1000)).padStart(2, '0');
+                    if (isPaused) {
+                        // If paused, the elapsed time is fixed at the moment it was paused.
+                        elapsedMilliseconds = lastPauseTime - startTime - (pausedDurationSeconds * 1000);
+                    } else {
+                        // If running, it's current time minus start time, minus total previous pauses.
+                        elapsedMilliseconds = now - startTime - (pausedDurationSeconds * 1000);
+                    }
+
+                    if (elapsedMilliseconds < 0) elapsedMilliseconds = 0;
+
+                    const hours = String(Math.floor(elapsedMilliseconds / 3600000)).padStart(2, '0');
+                    const minutes = String(Math.floor((elapsedMilliseconds % 3600000) / 60000)).padStart(2, '0');
+                    const seconds = String(Math.floor((elapsedMilliseconds % 60000) / 1000)).padStart(2, '0');
 
                     timerElement.textContent = `${hours}:${minutes}:${seconds}`;
                 }
 
-                setInterval(updateTimer, 1000);
+                // Only run the interval if the timer is not paused.
+                if (!isPaused) {
+                    setInterval(updateTimer, 1000);
+                }
                 updateTimer(); // Initial call to display timer immediately
             }
         });
@@ -206,14 +241,5 @@
     });
     </script>
 
-{% else %}
-    {# This block is for unauthenticated users, as before. #}
-    <div class="p-5 mb-4 bg-light rounded-3">
-        <div class="container-fluid py-5">
-            <h1 class="display-5 fw-bold">Welcome to TimeStamp</h1>
-            <p class="col-md-8 fs-4">Your personal time tracking assistant. Click, track, and manage your time effectively.</p>
-            <a href="{% url 'account_signup' %}" class="btn btn-primary btn-lg">Get Started</a>
-        </div>
-    </div>
 {% endif %}
 {% endblock %}
