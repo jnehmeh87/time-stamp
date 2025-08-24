@@ -17,7 +17,6 @@ from datetime import timedelta, date, datetime, time
 from decimal import Decimal
 from collections import defaultdict
 import csv
-from googletrans import Translator, LANGUAGES
 from .utils import render_to_pdf
 
 # --- Home & Timer Views ---
