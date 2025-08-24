@@ -57,11 +57,12 @@ class TimeEntryForm(forms.ModelForm):
 class ProjectForm(forms.ModelForm):
     class Meta:
         model = Project
-        fields = ['name', 'description', 'category']
+        fields = ['name', 'description', 'category', 'hourly_rate']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'category': forms.Select(attrs={'class': 'form-select'}),
+            'hourly_rate': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
         }
 
 class TimeEntryFilterForm(forms.Form):

@@ -13,6 +13,7 @@ class Project(models.Model):
     description = models.TextField(blank=True)
     category = models.CharField(max_length=10, choices=CATEGORY_CHOICES, default='work')
     is_archived = models.BooleanField(default=False)
+    hourly_rate = models.DecimalField(max_digits=8, decimal_places=2, default=0.00)
 
     def __str__(self):
         return self.name
@@ -44,6 +45,11 @@ class TimeEntry(models.Model):
     
     def __str__(self):
         return f"{self.title} ({self.user.username})"
+
+    def save(self, *args, **kwargs):
+        if self.project:
+            self.category = self.project.category
+        super().save(*args, **kwargs)
 
 class TimeEntryImage(models.Model):
     time_entry = models.ForeignKey(TimeEntry, related_name='images', on_delete=models.CASCADE)

@@ -23,18 +23,18 @@
         <form method="get" class="row g-3 align-items-end">
             <div class="col-lg-2">
                 <label for="start_date_desktop" class="form-label">Start Date</label>
-                <input type="date" name="start_date" id="start_date_desktop" class="form-control" value="{{ filter_form.start_date|default:'' }}">
+                <input type="date" name="start_date" id="start_date_desktop" class="form-control" value="{{ form.start_date.value|default:'' }}">
             </div>
             <div class="col-lg-2">
                 <label for="end_date_desktop" class="form-label">End Date</label>
-                <input type="date" name="end_date" id="end_date_desktop" class="form-control" value="{{ filter_form.end_date|default:'' }}">
+                <input type="date" name="end_date" id="end_date_desktop" class="form-control" value="{{ form.end_date.value|default:'' }}">
             </div>
             <div class="col-lg-2">
                 <label for="category_desktop" class="form-label">Category</label>
                 <select name="category" id="category_desktop" class="form-select">
                     <option value="">All</option>
-                    <option value="work" {% if filter_form.category == 'work' %}selected{% endif %}>Work</option>
-                    <option value="personal" {% if filter_form.category == 'personal' %}selected{% endif %}>Personal</option>
+                    <option value="work" {% if form.category.value == 'work' %}selected{% endif %}>Work</option>
+                    <option value="personal" {% if form.category.value == 'personal' %}selected{% endif %}>Personal</option>
                 </select>
             </div>
             <div class="col-lg-2">
@@ -42,7 +42,7 @@
                 <select name="project" id="project_desktop" class="form-select">
                     <option value="">All Projects</option>
                     {% for project in all_projects %}
-                        <option value="{{ project.pk }}" data-category="{{ project.category }}" {% if project.pk|stringformat:"s" == filter_form.project %}selected{% endif %}>
+                        <option value="{{ project.pk }}" data-category="{{ project.category }}" {% if project.pk|stringformat:"s" == form.project.value|stringformat:"s" %}selected{% endif %}>
                             {{ project.name }}
                         </option>
                     {% endfor %}
@@ -50,7 +50,7 @@
             </div>
             <div class="col-lg-2">
                 <div class="form-check">
-                    <input class="form-check-input" type="checkbox" name="show_archived" id="show_archived_desktop" value="on" {% if filter_form.show_archived %}checked{% endif %}>
+                    <input class="form-check-input" type="checkbox" name="show_archived" id="show_archived_desktop" value="on" {% if form.show_archived.value %}checked{% endif %}>
                     <label class="form-check-label" for="show_archived_desktop">
                         Show Archived
                     </label>
@@ -78,18 +78,18 @@
             <form method="get" class="row g-3">
                 <div class="col-12">
                     <label for="start_date_mobile" class="form-label">Start Date</label>
-                    <input type="date" name="start_date" id="start_date_mobile" class="form-control" value="{{ filter_form.start_date|default:'' }}">
+                    <input type="date" name="start_date" id="start_date_mobile" class="form-control" value="{{ form.start_date.value|default:'' }}">
                 </div>
                 <div class="col-12">
                     <label for="end_date_mobile" class="form-label">End Date</label>
-                    <input type="date" name="end_date" id="end_date_mobile" class="form-control" value="{{ filter_form.end_date|default:'' }}">
+                    <input type="date" name="end_date" id="end_date_mobile" class="form-control" value="{{ form.end_date.value|default:'' }}">
                 </div>
                 <div class="col-12">
                     <label for="category_mobile" class="form-label">Category</label>
                     <select name="category" id="category_mobile" class="form-select">
                         <option value="">All</option>
-                        <option value="work" {% if filter_form.category == 'work' %}selected{% endif %}>Work</option>
-                        <option value="personal" {% if filter_form.category == 'personal' %}selected{% endif %}>Personal</option>
+                        <option value="work" {% if form.category.value == 'work' %}selected{% endif %}>Work</option>
+                        <option value="personal" {% if form.category.value == 'personal' %}selected{% endif %}>Personal</option>
                     </select>
                 </div>
                 <div class="col-12">
@@ -99,7 +99,7 @@
                             data-latest-personal-project="{{ latest_personal_project_id|default:'' }}">
                         <option value="">All Projects</option>
                         {% for project in all_projects %}
-                            <option value="{{ project.pk }}" data-category="{{ project.category }}" {% if project.pk|stringformat:"s" == filter_form.project %}selected{% endif %}>
+                            <option value="{{ project.pk }}" data-category="{{ project.category }}" {% if project.pk|stringformat:"s" == form.project.value|stringformat:"s" %}selected{% endif %}>
                                 {{ project.name }}
                             </option>
                         {% endfor %}
@@ -107,7 +107,7 @@
                 </div>
                 <div class="col-12">
                     <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="show_archived" id="show_archived_mobile" value="on" {% if filter_form.show_archived %}checked{% endif %}>
+                        <input class="form-check-input" type="checkbox" name="show_archived" id="show_archived_mobile" value="on" {% if form.show_archived.value %}checked{% endif %}>
                         <label class="form-check-label" for="show_archived_mobile">
                             Show Archived
                         </label>
@@ -132,7 +132,7 @@
                     </label>
                 </div>
                 <div class="d-flex gap-2">
-                    {% if filter_form.show_archived %}
+                    {% if form.show_archived.value %}
                         <button type="submit" class="btn btn-secondary archive-action-btn" id="bulk-unarchive-btn" disabled formaction="{% url 'tracker:entry_bulk_unarchive_confirm' %}">Unarchive</button>
                     {% else %}
                         <button type="submit" class="btn btn-warning archive-action-btn" id="bulk-archive-btn" disabled formaction="{% url 'tracker:entry_bulk_archive_confirm' %}">Archive</button>

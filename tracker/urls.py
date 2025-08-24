@@ -38,6 +38,8 @@ urlpatterns = [
     path('reports/', views.ReportView.as_view(), name='reports'),
     path('reports/translate/', views.translate_report, name='translate_report'),
     path('analytics/', views.AnalyticsDashboardView.as_view(), name='analytics'),
+    path('income/', views.income_calculator, name='income_calculator'),
+    path('daily-earnings/', views.daily_earnings_tracker, name='daily_earnings_tracker'),
 
     # AJAX
     path('ajax/get-projects/', views.get_projects_for_category, name='ajax_get_projects'),

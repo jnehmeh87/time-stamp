@@ -1,5 +1,6 @@
 from django import template
 from datetime import timedelta
+from decimal import Decimal
 
 register = template.Library()
 
@@ -51,3 +52,16 @@ def url_replace(request, field, value, direction_field):
         dict_[direction_field] = 'asc'
         
     return dict_.urlencode()
+
+@register.simple_tag
+def calculate_entry_price(entry, hourly_rate):
+    """
+    Calculate the price for a single time entry based on its worked duration and the project's hourly rate.
+    """
+    if not hourly_rate or not hasattr(entry, 'worked_duration'):
+        return "0.00"
+    
+    hourly_rate = Decimal(hourly_rate)
+    worked_hours = Decimal(entry.worked_duration.total_seconds()) / Decimal(3600)
+    price = worked_hours * hourly_rate
+    return f"{price:.2f}"

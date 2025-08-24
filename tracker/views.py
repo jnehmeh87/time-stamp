@@ -5,15 +5,18 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.utils import timezone
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, reverse
+from urllib.parse import urlencode
 from .models import TimeEntry, Project
 from .forms import TimeEntryForm, ProjectForm, TimeEntryFilterForm, ReportForm, TimeEntryUpdateForm
 from django.contrib import messages
-from django.db.models import Sum, F, Min, Max
-from datetime import timedelta, date
+from django.db.models import Sum, F, ExpressionWrapper, DurationField, Min, Max, Count
+from django.db.models.functions import TruncDay
+from django.http import JsonResponse
+from datetime import timedelta, date, datetime, time
+from decimal import Decimal
+from collections import defaultdict
 import csv
-from django.http import HttpResponse, JsonResponse
-from urllib.parse import urlencode
 from googletrans import Translator, LANGUAGES
 from .utils import render_to_pdf
 
@@ -407,24 +410,139 @@ class AnalyticsDashboardView(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
         user = request.user
         
-        total_duration = TimeEntry.objects.filter(user=user, end_time__isnull=False).aggregate(
-            total=Sum(F('end_time') - F('start_time'))
-        )['total'] or timedelta()
+        # --- Date Range Filtering ---
+        period = request.GET.get('period', '30d')
+        end_date = timezone.now()
+        start_date = None
+        days_in_period = 30
 
-        time_per_project = TimeEntry.objects.filter(user=user, end_time__isnull=False) \
-            .values('project__name') \
-            .annotate(total_duration=Sum(F('end_time') - F('start_time'))) \
-            .order_by('-total_duration')
+        if period == '7d':
+            start_date = end_date - timedelta(days=7)
+            days_in_period = 7
+        elif period == '15d':
+            start_date = end_date - timedelta(days=15)
+            days_in_period = 15
+        elif period == '3m':
+            start_date = end_date - timedelta(days=90)
+            days_in_period = 90
+        elif period == '6m':
+            start_date = end_date - timedelta(days=182)
+            days_in_period = 182
+        elif period == '1y':
+            start_date = end_date - timedelta(days=365)
+            days_in_period = 365
+        elif period == 'all':
+            start_date = None
+        else: # Default to 30d
+            period = '30d'
+            start_date = end_date - timedelta(days=30)
 
-        time_per_category = TimeEntry.objects.filter(user=user, end_time__isnull=False) \
-            .values('category') \
-            .annotate(total_duration=Sum(F('end_time') - F('start_time'))) \
-            .order_by('-total_duration')
+        # --- Main Queryset ---
+        time_entries_qs = TimeEntry.objects.filter(user=user, end_time__isnull=False)
+        if start_date:
+            time_entries_qs = time_entries_qs.filter(start_time__gte=start_date)
+
+        # --- 1. Summary Cards Data ---
+        total_duration = time_entries_qs.aggregate(total=Sum(F('end_time') - F('start_time')))['total'] or timedelta()
+
+        # Calculate total earnings only from projects with an hourly rate > 0
+        earnings_entries = time_entries_qs.filter(project__hourly_rate__gt=0)
+        total_earnings = sum(
+            (entry.duration.total_seconds() / 3600) * float(entry.project.hourly_rate)
+            for entry in earnings_entries
+        )
+
+        # --- 2. Doughnut Chart: Time per Category ---
+        time_per_category_chart = time_entries_qs.values('category').annotate(
+            duration_seconds=Sum(F('end_time') - F('start_time'))
+        ).order_by('-duration_seconds')
+
+        category_chart_labels = [item['category'].capitalize() if item['category'] else 'Unassigned' for item in time_per_category_chart]
+        category_chart_data = [item['duration_seconds'].total_seconds() / 3600 for item in time_per_category_chart]
+
+        # --- 3. Bar Chart: Earnings per Project ---
+        earnings_per_project = earnings_entries.values('project__name').annotate(
+            total_seconds=Sum(F('end_time') - F('start_time')),
+            hourly_rate=F('project__hourly_rate')
+        ).order_by('-total_seconds')
+
+        earnings_labels = [item['project__name'] for item in earnings_per_project]
+        earnings_data = [
+            (item['total_seconds'].total_seconds() / 3600) * float(item['hourly_rate'])
+            for item in earnings_per_project
+        ]
+
+        # --- 4. Line Chart: Activity by Project over selected period ---
+        # Determine date range for labels
+        label_start_date = start_date
+        if period == 'all':
+            first_entry = TimeEntry.objects.filter(user=user, end_time__isnull=False).order_by('start_time').first()
+            if first_entry:
+                label_start_date = first_entry.start_time
+                days_in_period = (timezone.now().date() - label_start_date.date()).days + 1
+            else: # No entries at all
+                label_start_date = timezone.now()
+                days_in_period = 1
+        
+        activity_labels = [(label_start_date.date() + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(days_in_period)]
+        
+        # Group data by project
+        activity_by_project = defaultdict(lambda: {day: 0 for day in activity_labels})
+        
+        # Get a list of all projects in the period to ensure they appear in the legend
+        projects_in_period = time_entries_qs.filter(project__name__isnull=False).values_list('project__name', flat=True).distinct()
+        projects = sorted(list(projects_in_period))
+
+        # Fetch entries to process in Python, splitting them if they cross midnight
+        entries_for_chart = time_entries_qs.select_related('project')
+
+        for entry in entries_for_chart:
+            project_name = entry.project.name if entry.project else 'Unassigned'
+            
+            current_time = entry.start_time
+            while current_time < entry.end_time:
+                day_str = current_time.strftime('%Y-%m-%d')
+                
+                # Midnight of the current day
+                midnight = timezone.make_aware(
+                    datetime.combine(current_time.date() + timedelta(days=1), time.min),
+                    current_time.tzinfo
+                )
+                
+                chunk_end = min(midnight, entry.end_time)
+                duration = chunk_end - current_time
+                
+                if day_str in activity_by_project[project_name]:
+                    activity_by_project[project_name][day_str] += duration.total_seconds() / 3600
+                
+                current_time = chunk_end
+
+        activity_datasets = []
+        if time_entries_qs.filter(project__isnull=True).exists() and 'Unassigned' not in projects:
+             projects.insert(0, 'Unassigned')
+
+        for project_name in projects:
+            # Only add dataset if there's data for it
+            if project_name in activity_by_project and any(activity_by_project[project_name].values()):
+                dataset = {
+                    'label': project_name,
+                    'data': [activity_by_project[project_name][day] for day in activity_labels]
+                }
+                activity_datasets.append(dataset)
 
         context = {
             'total_time_tracked': total_duration,
-            'time_per_project': time_per_project,
-            'time_per_category': time_per_category,
+            'total_earnings': total_earnings,
+            'active_period': period,
+            
+            'category_chart_labels': category_chart_labels,
+            'category_chart_data': category_chart_data,
+
+            'earnings_chart_labels': earnings_labels,
+            'earnings_chart_data': earnings_data,
+
+            'activity_chart_labels': activity_labels,
+            'activity_chart_datasets': activity_datasets,
         }
         return render(request, 'tracker/analytics.html', context)
 
@@ -635,3 +753,175 @@ def translate_report(request):
         return response
 
     return render(request, 'tracker/report_translated.html', context)
+
+def daily_earnings_tracker(request):
+    # If the essential params are not in the request, redirect with defaults.
+    # This handles both initial page load and category changes from the frontend.
+    if 'project' not in request.GET or not request.GET.get('project'):
+        today = date.today()
+        
+        # Use category from GET if present (from category dropdown), otherwise default to 'work'
+        default_category = request.GET.get('category', 'work')
+        
+        latest_entry = TimeEntry.objects.filter(
+            user=request.user, 
+            project__category=default_category, 
+            project__isnull=False
+        ).order_by('-start_time').first()
+        
+        default_project_id = latest_entry.project.id if latest_entry else ''
+
+        params = {
+            'category': default_category,
+            'project': default_project_id,
+            'start_date': today.replace(day=1).strftime('%Y-%m-%d'),
+            'end_date': today.strftime('%Y-%m-%d'),
+        }
+        query_string = urlencode({k: v for k, v in params.items() if v})
+        return redirect(f"{reverse('tracker:daily_earnings_tracker')}?{query_string}")
+
+    # If we are here, we have GET params (either from defaults or user submission)
+    form = ReportForm(request.GET, user=request.user)
+    context = {'form': form}
+
+    if form.is_valid():
+        project = form.cleaned_data.get('project')
+        start_date = form.cleaned_data.get('start_date')
+        end_date = form.cleaned_data.get('end_date')
+
+        if project and project.hourly_rate and start_date and end_date:
+            # --- Swedish Tax Constants ---
+            SOCIAL_FEES_RATE = Decimal('0.2897')
+            MUNICIPAL_TAX_RATE = Decimal('0.32') # Using a common average
+
+            end_date_inclusive = end_date + timedelta(days=1)
+            entries = TimeEntry.objects.filter(
+                project=project,
+                start_time__gte=start_date,
+                end_time__lt=end_date_inclusive,
+                user=request.user
+            ).order_by('start_time')
+
+            hourly_rate = Decimal(project.hourly_rate)
+
+            # Add worked_duration to each entry for the template
+            total_worked_duration = timedelta(0)
+            for entry in entries:
+                if entry.end_time and entry.start_time:
+                    entry.worked_duration = (entry.end_time - entry.start_time) - entry.paused_duration
+                    total_worked_duration += entry.worked_duration
+                else:
+                    entry.worked_duration = timedelta(0)
+
+            # Summary Calculations based on Swedish Sole Trader model
+            total_hours = Decimal(total_worked_duration.total_seconds()) / Decimal(3600)
+            gross_pay = total_hours * hourly_rate # This is the revenue
+
+            social_fees_amount = gross_pay * SOCIAL_FEES_RATE
+            taxable_income = gross_pay - social_fees_amount
+            income_tax_amount = taxable_income * MUNICIPAL_TAX_RATE
+            net_pay = taxable_income - income_tax_amount
+
+            # Data for chart
+            daily_earnings = defaultdict(Decimal)
+            for entry in entries:
+                date_key = entry.start_time.strftime('%Y-%m-%d')
+                worked_hours_entry = Decimal(entry.worked_duration.total_seconds()) / Decimal(3600)
+                daily_earnings[date_key] += worked_hours_entry * hourly_rate
+            
+            chart_labels = sorted(daily_earnings.keys())
+            chart_data = [daily_earnings[label] for label in chart_labels]
+
+            context.update({
+                'project': project,
+                'entries': entries,
+                'hourly_rate': hourly_rate,
+                'chart_labels': chart_labels,
+                'chart_data': chart_data,
+                'total_hours': total_hours,
+                'gross_pay': gross_pay,
+                'social_fees_amount': social_fees_amount,
+                'income_tax_amount': income_tax_amount,
+                'net_pay': net_pay,
+            })
+
+    return render(request, 'tracker/daily_earnings_tracker.html', context)
+
+def income_calculator(request):
+    # --- Part 1: Swedish Freelance Rate Calculator ---
+    context = {}
+    desired_salary_str = request.GET.get('desired_salary')
+
+    if desired_salary_str:
+        try:
+            # --- Input Data ---
+            desired_salary = Decimal(desired_salary_str)
+            overhead_costs = Decimal(request.GET.get('overhead_costs', '0'))
+            profit_margin_perc = Decimal(request.GET.get('profit_margin', '0'))
+            billable_hours = Decimal(request.GET.get('billable_hours', '1')) # Avoid division by zero
+            municipal_tax_perc = Decimal(request.GET.get('municipal_tax', '0'))
+
+            # --- Constants for Swedish calculations ---
+            SOCIAL_FEES_RATE = Decimal('0.2897')
+            VACATION_PAY_RATE = Decimal('0.12')
+            PENSION_RATE = Decimal('0.045')
+            SICK_LEAVE_BUFFER_RATE = Decimal('0.05')
+            STATE_TAX_THRESHOLD = Decimal('598500') # For 2023/2024, annual income
+            
+            # --- Calculations ---
+            social_fees = desired_salary * SOCIAL_FEES_RATE
+            vacation_pay = desired_salary * VACATION_PAY_RATE
+            pension_savings = desired_salary * PENSION_RATE
+            sick_leave_buffer = desired_salary * SICK_LEAVE_BUFFER_RATE
+
+            total_monthly_cost = (desired_salary + social_fees + vacation_pay + 
+                                  pension_savings + sick_leave_buffer + overhead_costs)
+            
+            profit_amount = total_monthly_cost * (profit_margin_perc / 100)
+            total_to_invoice = total_monthly_cost + profit_amount
+            
+            hourly_rate_to_charge = total_to_invoice / billable_hours if billable_hours > 0 else 0
+
+            # Personal take-home pay calculation
+            total_tax_amount = desired_salary * (municipal_tax_perc / 100)
+            # Note: This is a simplification. Real tax is more complex.
+            net_salary = desired_salary - total_tax_amount
+
+            context.update({
+                'hourly_rate_to_charge': hourly_rate_to_charge,
+                'desired_salary': desired_salary,
+                'overhead_costs': overhead_costs,
+                'profit_margin': profit_margin_perc,
+                'social_fees': social_fees,
+                'vacation_pay': vacation_pay,
+                'pension_savings': pension_savings,
+                'sick_leave_buffer': sick_leave_buffer,
+                'total_monthly_cost': total_monthly_cost,
+                'profit_amount': profit_amount,
+                'total_to_invoice': total_to_invoice,
+                'municipal_tax': municipal_tax_perc,
+                'total_tax_amount': total_tax_amount,
+                'net_salary': net_salary,
+                'state_tax_threshold': STATE_TAX_THRESHOLD,
+            })
+        except (ValueError, TypeError):
+            messages.error(request, "Invalid input. Please enter valid numbers.")
+
+    return render(request, 'tracker/income_calculator.html', context)
+
+
+def ajax_get_project_dates(request):
+    project_id = request.GET.get('project_id')
+    if project_id:
+        project = get_object_or_404(Project, pk=project_id, user=request.user)
+        dates = TimeEntry.objects.filter(project=project, user=request.user).aggregate(
+            start_date=Min('start_time__date'),
+            end_date=Max('end_time__date')
+        )
+        if dates['start_date'] and dates['end_date']:
+            return JsonResponse({
+                'success': True,
+                'start_date': dates['start_date'].strftime('%Y-%m-%d'),
+                'end_date': dates['end_date'].strftime('%Y-%m-%d'),
+            })
+    return JsonResponse({'success': False})
