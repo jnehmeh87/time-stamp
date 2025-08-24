@@ -8,6 +8,7 @@ arabic-reshaper==3.0.0
 reportlab==3.6.12
 django-widget-tweaks
 pytz
-gunicorn
-django-heroku
 whitenoise
+psycopg2-binary==2.9.5
+whitenoise
+psycopg2-binary
