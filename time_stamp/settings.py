@@ -145,7 +145,6 @@ if 'DATABASE_URL' in os.environ:
     # For now, we'll use a dummy setting to prevent crashes.
     # NOTE: This means user-uploaded images will not persist on Heroku.
     MEDIA_ROOT = os.path.join(BASE_DIR, 'staticfiles', 'media')
-    os.makedirs(MEDIA_ROOT, exist_ok=True)
 
 
 # Default primary key field type
