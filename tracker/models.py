@@ -21,12 +21,12 @@ class Profile(models.Model):
         return f'{self.user.username} Profile'
 
 @receiver(post_save, sender=User)
-def create_or_update_user_profile(sender, instance, **kwargs):
+def create_user_profile(sender, instance, created, **kwargs):
     """
-    Ensure a profile exists for every user.
-    Uses get_or_create to be robust against users created before the profile model.
+    Create a Profile instance only when a new User is created.
     """
-    Profile.objects.get_or_create(user=instance)
+    if created:
+        Profile.objects.create(user=instance)
 
 
 class Project(models.Model):
