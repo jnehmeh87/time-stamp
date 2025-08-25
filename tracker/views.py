@@ -121,37 +121,62 @@ class TimeEntryListView(LoginRequiredMixin, ListView):
     model = TimeEntry
     template_name = 'tracker/timeentry_list.html'
     context_object_name = 'entries'
-    paginate_by = 10
+    paginate_by = 25
+
+    def get_paginate_by(self, queryset):
+        """
+        Disables pagination if any filters are applied in the request.
+        """
+        # These are the keys for filtering, excluding pagination and sorting controls.
+        filter_keys = ['start_date', 'end_date', 'category', 'project', 'show_archived']
+        
+        # If any of the filter keys with a value are present in the GET request, disable pagination.
+        if any(self.request.GET.get(key) for key in filter_keys):
+            return None
+        
+        return self.paginate_by
 
     def get_queryset(self):
         queryset = super().get_queryset().filter(user=self.request.user)
-        self.filter_form = TimeEntryFilterForm(self.request.GET)
+
+        # Determine form data: use GET params if available, otherwise use defaults.
+        form_data = self.request.GET
+        if not form_data:
+            today = timezone.now().date()
+            start_of_month = today.replace(day=1)
+            form_data = {
+                'start_date': start_of_month,
+                'end_date': today,
+            }
+        
+        self.form = TimeEntryFilterForm(form_data)
 
         # Annotate with duration for sorting
         queryset = queryset.annotate(duration_calc=F('end_time') - F('start_time'))
 
-        project_id = self.request.GET.get('project')
-        if project_id:
-            queryset = queryset.filter(project_id=project_id)
-
-        if self.filter_form.is_valid():
-            start_date = self.filter_form.cleaned_data.get('start_date')
+        if self.form.is_valid():
+            start_date = self.form.cleaned_data.get('start_date')
             if start_date:
                 queryset = queryset.filter(start_time__date__gte=start_date)
 
-            end_date = self.filter_form.cleaned_data.get('end_date')
+            end_date = self.form.cleaned_data.get('end_date')
             if end_date:
                 queryset = queryset.filter(end_time__date__lte=end_date)
 
-            category = self.filter_form.cleaned_data.get('category')
+            category = self.form.cleaned_data.get('category')
             if category:
                 queryset = queryset.filter(category=category)
+
+            project = self.form.cleaned_data.get('project')
+            if project:
+                queryset = queryset.filter(project=project)
             
-            if self.filter_form.cleaned_data.get('show_archived'):
+            if self.form.cleaned_data.get('show_archived'):
                 queryset = queryset.filter(is_archived=True)
             else:
                 queryset = queryset.filter(is_archived=False)
         else:
+            # Fallback for safety, though the form should always be valid with defaults.
             queryset = queryset.filter(is_archived=False)
 
         # Sorting logic
@@ -176,12 +201,8 @@ class TimeEntryListView(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         
-        # Prepare data for the template
-        filter_data = self.filter_form.cleaned_data if self.filter_form.is_valid() else {}
-        selected_project_id = self.request.GET.get('project')
-        if selected_project_id:
-            filter_data['project'] = selected_project_id
-        context['filter_form'] = filter_data
+        # Pass the form to the template
+        context['form'] = self.form
 
         # Pass sorting info to template
         context['sort_by'] = self.request.GET.get('sort_by', 'start_time')
@@ -232,7 +253,7 @@ class TimeEntryDeleteView(LoginRequiredMixin, DeleteView):
 
 @login_required
 def time_entry_bulk_delete_confirm(request):
-    selected_ids = request.GET.getlist('selected_entries')
+    selected_ids = request.POST.getlist('selected_entries')
     entries_to_delete = TimeEntry.objects.filter(user=request.user, pk__in=selected_ids)
     context = {
         'entries_to_delete': entries_to_delete
@@ -250,7 +271,7 @@ def time_entry_bulk_delete(request):
 
 @login_required
 def time_entry_bulk_archive_confirm(request):
-    selected_ids = request.GET.getlist('selected_entries')
+    selected_ids = request.POST.getlist('selected_entries')
     entries_to_process = TimeEntry.objects.filter(user=request.user, pk__in=selected_ids)
     context = {
         'entries_to_process': entries_to_process,
@@ -260,7 +281,7 @@ def time_entry_bulk_archive_confirm(request):
 
 @login_required
 def time_entry_bulk_unarchive_confirm(request):
-    selected_ids = request.GET.getlist('selected_entries')
+    selected_ids = request.POST.getlist('selected_entries')
     entries_to_process = TimeEntry.objects.filter(user=request.user, pk__in=selected_ids)
     context = {
         'entries_to_process': entries_to_process
@@ -747,7 +768,7 @@ def translate_report(request):
         for item in translated_entries:
             entry = item['original']
             writer.writerow([
-                entry.title, item['title'], entry.description, item['description'],
+                entry.title, item['title'], entry.description, entry['description'],
                 entry.notes, item['notes'], entry.project.name if entry.project else '-',
                 entry.start_time.strftime('%Y-%m-%d %H:%M:%S'), str(entry.duration)
             ])
@@ -925,4 +946,5 @@ def ajax_get_project_dates(request):
                 'start_date': dates['start_date'].strftime('%Y-%m-%d'),
                 'end_date': dates['end_date'].strftime('%Y-%m-%d'),
             })
+    return JsonResponse({'success': False})
     return JsonResponse({'success': False})

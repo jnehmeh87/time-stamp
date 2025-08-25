@@ -22,14 +22,6 @@
     <div class="card-body">
         <form method="get" class="row g-3 align-items-end">
             <div class="col-lg-2">
-                <label for="start_date_desktop" class="form-label">Start Date</label>
-                <input type="date" name="start_date" id="start_date_desktop" class="form-control" value="{{ form.start_date.value|default:'' }}">
-            </div>
-            <div class="col-lg-2">
-                <label for="end_date_desktop" class="form-label">End Date</label>
-                <input type="date" name="end_date" id="end_date_desktop" class="form-control" value="{{ form.end_date.value|default:'' }}">
-            </div>
-            <div class="col-lg-2">
                 <label for="category_desktop" class="form-label">Category</label>
                 <select name="category" id="category_desktop" class="form-select">
                     <option value="">All</option>
@@ -49,8 +41,16 @@
                 </select>
             </div>
             <div class="col-lg-2">
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" name="show_archived" id="show_archived_desktop" value="on" {% if form.show_archived.value %}checked{% endif %}>
+                <label for="start_date_desktop" class="form-label">Start Date</label>
+                <input type="date" name="start_date" id="start_date_desktop" class="form-control" value="{{ form.start_date.value|default:'' }}">
+            </div>
+            <div class="col-lg-2">
+                <label for="end_date_desktop" class="form-label">End Date</label>
+                <input type="date" name="end_date" id="end_date_desktop" class="form-control" value="{{ form.end_date.value|default:'' }}">
+            </div>
+            <div class="col-lg-2">
+                <div class="form-check form-switch pb-1">
+                    <input class="form-check-input" type="checkbox" role="switch" name="show_archived" id="show_archived_desktop" value="on" {% if form.show_archived.value %}checked{% endif %} onchange="this.form.submit()">
                     <label class="form-check-label" for="show_archived_desktop">
                         Show Archived
                     </label>
@@ -106,8 +106,8 @@
                     </select>
                 </div>
                 <div class="col-12">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" name="show_archived" id="show_archived_mobile" value="on" {% if form.show_archived.value %}checked{% endif %}>
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" name="show_archived" id="show_archived_mobile" value="on" {% if form.show_archived.value %}checked{% endif %} onchange="this.form.submit()">
                         <label class="form-check-label" for="show_archived_mobile">
                             Show Archived
                         </label>
@@ -150,33 +150,33 @@
                             <tr id="sortable-headers">
                                 <th data-column-id="checkbox"></th><!-- Checkbox column -->
                                 <th class="text-center" data-column-id="task">
-                                    <a href="?{% url_replace request 'sort_by' 'title' 'sort_dir' %}" class="text-decoration-none text-reset">
+                                    <a href="?{% sort_url 'title' %}" class="text-decoration-none text-reset">
                                         Task {% if sort_by == 'title' %}{% if sort_dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}{% endif %}
                                     </a>
                                 </th>
                                 <th class="text-center" data-column-id="project">
-                                     <a href="?{% url_replace request 'sort_by' 'project__name' 'sort_dir' %}" class="text-decoration-none text-reset">
+                                     <a href="?{% sort_url 'project__name' %}" class="text-decoration-none text-reset">
                                         Project {% if sort_by == 'project__name' %}{% if sort_dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}{% endif %}
                                     </a>
                                 </th>
                                 <th class="text-center" data-column-id="date">
-                                     <a href="?{% url_replace request 'sort_by' 'start_time' 'sort_dir' %}" class="text-decoration-none text-reset">
+                                     <a href="?{% sort_url 'start_time' %}" class="text-decoration-none text-reset">
                                         Date {% if sort_by == 'start_time' %}{% if sort_dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}{% endif %}
                                     </a>
                                 </th>
                                 <th class="text-center" data-column-id="start_time">Time Details</th>
                                 <th class="text-center" data-column-id="duration">
-                                     <a href="?{% url_replace request 'sort_by' 'duration' 'sort_dir' %}" class="text-decoration-none text-reset">
+                                     <a href="?{% sort_url 'duration' %}" class="text-decoration-none text-reset">
                                         Duration {% if sort_by == 'duration' %}{% if sort_dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}{% endif %}
                                     </a>
                                 </th>
                                 <th class="text-center" data-column-id="paused_time">
-                                     <a href="?{% url_replace request 'sort_by' 'paused_duration' 'sort_dir' %}" class="text-decoration-none text-reset">
+                                     <a href="?{% sort_url 'paused_duration' %}" class="text-decoration-none text-reset">
                                         Paused Time {% if sort_by == 'paused_duration' %}{% if sort_dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}{% endif %}
                                     </a>
                                 </th>
                                 <th class="text-center" data-column-id="category">
-                                     <a href="?{% url_replace request 'sort_by' 'category' 'sort_dir' %}" class="text-decoration-none text-reset">
+                                     <a href="?{% sort_url 'category' %}" class="text-decoration-none text-reset">
                                         Category {% if sort_by == 'category' %}{% if sort_dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}{% endif %}
                                     </a>
                                 </th>
@@ -187,7 +187,7 @@
                         </thead>
                         <tbody id="table-body">
                             {% for entry in entries %}
-                            <tr class="{% if entry.is_archived %}table-secondary text-muted{% endif %}">
+                            <tr class="{% if entry.is_archived %}table-warning{% endif %}">
                                 <td class="text-center" data-column-id="checkbox"><input class="form-check-input entry-checkbox" type="checkbox" name="selected_entries" value="{{ entry.pk }}"></td>
                                 <td class="text-center" data-column-id="task"><a href="{% url 'tracker:entry_update' entry.pk %}">{{ entry.title }}</a></td>
                                 <td class="text-center" data-column-id="project">{{ entry.project.name|default:"-" }}</td>
@@ -222,7 +222,7 @@
             <div id="card-view-container" class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3" style="display: none;">
                 {% for entry in entries %}
                 <div class="col">
-                    <div class="card h-100 {% if entry.is_archived %}bg-light text-muted{% endif %}">
+                    <div class="card h-100 {% if entry.is_archived %}bg-warning bg-opacity-25{% endif %}">
                         {% with entry.images.first as first_image %}
                             {% if first_image %}
                                 <a href="{{ first_image.image.url }}" target="_blank">
@@ -272,6 +272,43 @@
         </div>
     </div>
 </form>
+
+{% if is_paginated %}
+<nav aria-label="Page navigation">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?{% url_replace page=1 %}" aria-label="First">
+                    <span aria-hidden="true">&laquo;&laquo;</span>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?{% url_replace page=page_obj.previous_page_number %}" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+        {% endif %}
+
+        <li class="page-item disabled">
+            <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        </li>
+
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?{% url_replace page=page_obj.next_page_number %}" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?{% url_replace page=page_obj.paginator.num_pages %}" aria-label="Last">
+                    <span aria-hidden="true">&raquo;&raquo;</span>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
 {% endblock %}
 
 {% block extra_js %}
@@ -506,6 +543,68 @@ document.addEventListener('DOMContentLoaded', function() {
             toggleIcon.textContent = '+';
         });
     }
+
+    // --- Dynamic Filter Logic ---
+    function setupDynamicFilters(categorySelectEl, projectSelectEl, startDateIn, endDateIn) {
+        if (!categorySelectEl || !projectSelectEl) return;
+
+        const projectOptions = Array.from(projectSelectEl.options);
+
+        // 1. Filter projects based on category
+        categorySelectEl.addEventListener('change', function() {
+            const selectedCategory = this.value;
+            const currentProject = projectSelectEl.value;
+
+            // Reset project dropdown
+            projectSelectEl.innerHTML = ''; 
+
+            projectOptions.forEach(option => {
+                if (option.value === "" || selectedCategory === "" || option.dataset.category === selectedCategory) {
+                    projectSelectEl.add(option.cloneNode(true));
+                }
+            });
+
+            // Restore selection if possible, otherwise reset
+            const selectedOption = projectSelectEl.querySelector(`option[value="${currentProject}"]`);
+            if (selectedOption) {
+                projectSelectEl.value = currentProject;
+            } else {
+                projectSelectEl.value = '';
+            }
+        });
+
+        // 2. Auto-populate dates on project selection
+        projectSelectEl.addEventListener('change', function() {
+            const projectId = this.value;
+            if (projectId) {
+                fetch(`{% url 'tracker:ajax_get_project_dates' %}?project_id=${projectId}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            if(startDateIn) startDateIn.value = data.start_date;
+                            if(endDateIn) endDateIn.value = data.end_date;
+                        }
+                    });
+            }
+        });
+    }
+
+    // Setup for desktop filters
+    setupDynamicFilters(
+        document.getElementById('category_desktop'),
+        document.getElementById('project_desktop'),
+        document.getElementById('start_date_desktop'),
+        document.getElementById('end_date_desktop')
+    );
+
+    // Setup for mobile filters
+    setupDynamicFilters(
+        document.getElementById('category_mobile'),
+        document.getElementById('project_mobile'),
+        document.getElementById('start_date_mobile'),
+        document.getElementById('end_date_mobile')
+    );
+
 
     // --- Bulk Action Logic ---
     const selectAllCheckbox = document.getElementById('select-all-entries');

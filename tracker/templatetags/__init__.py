@@ -1,1 +1,1 @@
-# This file can be empty.
+# This file should be empty.

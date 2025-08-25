@@ -4,6 +4,35 @@ from decimal import Decimal
 
 register = template.Library()
 
+@register.simple_tag(takes_context=True)
+def url_replace(context, **kwargs):
+    """
+    Replaces or adds query parameters to the current URL.
+    e.g. {% url_replace page=5 %}
+    """
+    query = context['request'].GET.copy()
+    for key, value in kwargs.items():
+        query[key] = value
+    return query.urlencode()
+
+@register.simple_tag(takes_context=True)
+def sort_url(context, field):
+    """
+    Generates a URL for sorting a table column, toggling the direction.
+    e.g. {% sort_url 'title' %}
+    """
+    query = context['request'].GET.copy()
+    current_sort_by = query.get('sort_by')
+    current_sort_dir = query.get('sort_dir')
+
+    query['sort_by'] = field
+    if current_sort_by == field and current_sort_dir == 'asc':
+        query['sort_dir'] = 'desc'
+    else:
+        query['sort_dir'] = 'asc'
+        
+    return query.urlencode()
+
 @register.filter
 def human_duration(duration):
     """
@@ -32,26 +61,6 @@ def human_duration(duration):
         parts.append(f"{seconds}s")
 
     return " ".join(parts)
-
-@register.simple_tag
-def url_replace(request, field, value, direction_field):
-    """
-    A template tag to help with building sorting URLs that preserve other GET parameters.
-    """
-    dict_ = request.GET.copy()
-    
-    # If the sort field is the same as the current one, toggle the direction
-    if dict_.get(field) == value:
-        if dict_.get(direction_field) == 'asc':
-            dict_[direction_field] = 'desc'
-        else:
-            dict_[direction_field] = 'asc'
-    # Otherwise, set a new sort field and default to ascending
-    else:
-        dict_[field] = value
-        dict_[direction_field] = 'asc'
-        
-    return dict_.urlencode()
 
 @register.simple_tag
 def calculate_entry_price(entry, hourly_rate):

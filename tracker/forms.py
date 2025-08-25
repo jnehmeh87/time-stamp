@@ -70,7 +70,7 @@ class ProjectForm(forms.ModelForm):
 class TimeEntryFilterForm(forms.Form):
     start_date = forms.DateField(required=False, widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}))
     end_date = forms.DateField(required=False, widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}))
-    category = forms.ChoiceField(choices=[('', 'All'), ('work', 'Work'), ('personal', 'Personal')], required=False, widget=forms.Select(attrs={'class': 'form-select'}))
+    category = forms.ChoiceField(choices=[('', 'All Categories')] + CATEGORY_CHOICES, required=False, widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_category'}))
     show_archived = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}))
 
 class ReportForm(forms.Form):
