@@ -10,6 +10,6 @@ django-countries
 django-widget-tweaks
 googletrans==4.0.0-rc1
 xhtml2pdf
-whitenoise
 psycopg2-binary
 googletrans==4.0.0-rc1
+pytz
