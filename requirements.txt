@@ -8,8 +8,8 @@ django-crispy-forms
 crispy-bootstrap5
 django-countries
 django-widget-tweaks
-pytz
-whitenoise
+googletrans==4.0.0-rc1
+xhtml2pdf
 psycopg2-binary==2.9.5
 whitenoise
 psycopg2-binary
