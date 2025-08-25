@@ -139,6 +139,14 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
+# Production-specific settings
+if 'DATABASE_URL' in os.environ:
+    # In production, media files should be handled by a service like S3.
+    # For now, we'll use a dummy setting to prevent crashes.
+    # NOTE: This means user-uploaded images will not persist on Heroku.
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'staticfiles', 'media')
+    os.makedirs(MEDIA_ROOT, exist_ok=True)
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
