@@ -13,3 +13,4 @@ whitenoise
 psycopg2-binary==2.9.5
 whitenoise
 psycopg2-binary
+googletrans==4.0.0-rc1
