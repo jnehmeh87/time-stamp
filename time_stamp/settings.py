@@ -4,7 +4,7 @@ Django settings for time_stamp project.
 
 from pathlib import Path
 import os
-import dj_database_url
+# import django_heroku
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -14,14 +14,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-default-key-for-development')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG') == 'True'
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
-
-# If running on Heroku, add the app's domain to ALLOWED_HOSTS.
-# The 'DATABASE_URL' environment variable is a reliable indicator of a Heroku environment.
-if 'DATABASE_URL' in os.environ:
-    ALLOWED_HOSTS.append('timestamp-trackr-68fdb365e285.herokuapp.com')
+ALLOWED_HOSTS = []
 
 
 # Application definition
@@ -101,10 +96,6 @@ DATABASES = {
     }
 }
 
-# Production database configuration
-if 'DATABASE_URL' in os.environ:
-    DATABASES['default'] = dj_database_url.config(conn_max_age=600, ssl_require=True)
-
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -133,9 +124,6 @@ STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-# Use Whitenoise to serve static files in production
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
@@ -150,7 +138,9 @@ if DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # Allauth settings
-ACCOUNT_LOGIN_METHODS = ('username', 'email')
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = True
+ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
 ACCOUNT_EMAIL_VERIFICATION = 'optional' # Can be 'mandatory' in production
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
@@ -158,4 +148,3 @@ LOGOUT_REDIRECT_URL = '/'
 ACCOUNT_FORMS = {
     'signup': 'tracker.forms.CustomSignupForm',
 }
-
