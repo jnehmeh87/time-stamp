@@ -18,6 +18,10 @@ DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = []
 
+# If running on Heroku or another production environment
+if not DEBUG:
+    ALLOWED_HOSTS = ['timestamp-trackr.herokuapp.com']
+
 
 # Application definition
 
