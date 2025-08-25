@@ -17,10 +17,11 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-default-key-for-devel
 DEBUG = os.environ.get('DEBUG') == 'True'
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
-# Add the Heroku app URL to ALLOWED_HOSTS from an environment variable
-HOSTNAME = os.environ.get('HOSTNAME')
-if HOSTNAME:
-    ALLOWED_HOSTS.append(HOSTNAME)
+
+# If running on Heroku, add the app's domain to ALLOWED_HOSTS.
+# The 'DATABASE_URL' environment variable is a reliable indicator of a Heroku environment.
+if 'DATABASE_URL' in os.environ:
+    ALLOWED_HOSTS.append('timestamp-trackr-68fdb365e285.herokuapp.com')
 
 
 # Application definition
