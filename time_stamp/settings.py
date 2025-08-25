@@ -4,7 +4,7 @@ Django settings for time_stamp project.
 
 from pathlib import Path
 import os
-# import django_heroku
+import django_heroku
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -138,9 +138,7 @@ if DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # Allauth settings
-ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_USERNAME_REQUIRED = True
-ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
+ACCOUNT_LOGIN_METHODS = ('username', 'email')
 ACCOUNT_EMAIL_VERIFICATION = 'optional' # Can be 'mandatory' in production
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
@@ -148,3 +146,6 @@ LOGOUT_REDIRECT_URL = '/'
 ACCOUNT_FORMS = {
     'signup': 'tracker.forms.CustomSignupForm',
 }
+
+# Activate Django-Heroku.
+django_heroku.settings(locals())
