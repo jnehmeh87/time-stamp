@@ -137,8 +137,13 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Email settings for development
+# Email settings
 if DEBUG:
+    # During development, print emails to the console.
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    # In production, also print emails to the console (Heroku logs) to prevent crashes.
+    # For a real application, you would configure a service like SendGrid here.
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # Allauth settings
