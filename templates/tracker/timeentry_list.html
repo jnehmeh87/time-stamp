@@ -199,13 +199,15 @@
                                 <td class="text-center" data-column-id="description">{{ entry.description|truncatechars:30|default:"-" }}</td>
                                 <td class="text-center" data-column-id="notes">{{ entry.notes|truncatechars:30|default:"-" }}</td>
                                 <td class="text-center" data-column-id="image">
-                                    {% if entry.image %}
-                                        <a href="{{ entry.image.url }}" target="_blank">
-                                            <img src="{{ entry.image.url }}" alt="{{ entry.title }} image" style="max-width: 50px; max-height: 50px; object-fit: cover;">
-                                        </a>
-                                    {% else %}
-                                        -
-                                    {% endif %}
+                                    {% with entry.images.first as first_image %}
+                                        {% if first_image %}
+                                            <a href="{{ first_image.image.url }}" target="_blank">
+                                                <img src="{{ first_image.image.url }}" alt="{{ entry.title }} image" style="max-width: 50px; max-height: 50px; object-fit: cover;">
+                                            </a>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    {% endwith %}
                                 </td>
                             </tr>
                             {% empty %}
