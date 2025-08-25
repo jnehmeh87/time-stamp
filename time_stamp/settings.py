@@ -20,7 +20,7 @@ ALLOWED_HOSTS = []
 
 # If running on Heroku or another production environment
 if not DEBUG:
-    ALLOWED_HOSTS = ['timestamp-trackr.herokuapp.com']
+    ALLOWED_HOSTS = ['timestamp-trackr-68fdb365e285.herokuapp.com']
 
 
 # Application definition
