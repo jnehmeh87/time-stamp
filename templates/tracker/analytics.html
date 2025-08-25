@@ -36,9 +36,18 @@
 <div class="row">
     <div class="col-md-6 mb-4">
         <div class="card text-center h-100">
-            <div class="card-body">
+            <div class="card-body d-flex flex-column justify-content-center">
                 <h5 class="card-title">Total Time Tracked</h5>
-                <p class="card-text display-4">{{ total_time_tracked|human_duration }}</p>
+                <div class="row align-items-center mt-2">
+                    <div class="col-6 border-end">
+                        <h6 class="text-muted mb-0">Work</h6>
+                        <p class="h4 fw-light mb-0">{{ work_duration|human_duration }}</p>
+                    </div>
+                    <div class="col-6">
+                        <h6 class="text-muted mb-0">Personal</h6>
+                        <p class="h4 fw-light mb-0">{{ personal_duration|human_duration }}</p>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -115,6 +124,17 @@
 {% endblock %}
 
 {% block extra_js %}
+<style>
+    #activityLineChart {
+        min-height: 350px; /* Default height for mobile/tablet */
+    }
+
+    @media (min-width: 992px) { /* lg breakpoint and up */
+        #activityLineChart {
+            min-height: 650px; /* Height for desktop */
+        }
+    }
+</style>
 {{ category_chart_labels|json_script:"category_chart_labels" }}
 {{ category_chart_data|json_script:"category_chart_data" }}
 {{ earnings_chart_labels|json_script:"earnings_chart_labels" }}
@@ -216,9 +236,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 options: {
                     responsive: true,
+                    maintainAspectRatio: false,
                     scales: { 
                         y: { 
                             beginAtZero: true,
+                            max: 24,
                             title: {
                                 display: true,
                                 text: 'Hours'

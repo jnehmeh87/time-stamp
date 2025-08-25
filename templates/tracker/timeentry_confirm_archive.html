@@ -1,35 +1,39 @@
 {% extends "base.html" %}
 
-{% block title %}Confirm {{ action|capfirst }}{% endblock %}
+{% block title %}Confirm Bulk Archive{% endblock %}
 
 {% block content %}
 <div class="card">
     <div class="card-header">
-        <h1 class="mb-0">Confirm {{ action|capfirst }}</h1>
+        <h1>Confirm Bulk Archive</h1>
     </div>
     <div class="card-body">
-        <p>Are you sure you want to {{ action }} the following time entries?</p>
-
-        <ul>
+        <p>Are you sure you want to archive the following time entries?</p>
+        
+        <ul class="list-group mb-4">
             {% for entry in entries_to_process %}
-                <li>{{ entry.title }} ({{ entry.start_time|date:"Y-m-d H:i" }})</li>
+                <li class="list-group-item">{{ entry.title }} ({{ entry.start_time|date:"Y-m-d" }})</li>
             {% empty %}
-                <li>No entries selected.</li>
+                <li class="list-group-item">No entries selected.</li>
             {% endfor %}
         </ul>
 
         {% if entries_to_process %}
         <form method="post" action="{% url 'tracker:entry_bulk_archive' %}">
             {% csrf_token %}
-            <input type="hidden" name="action" value="{{ action }}">
+            <input type="hidden" name="action" value="archive">
+            <input type="hidden" name="preserved_filters" value="{{ preserved_filters }}">
             {% for entry in entries_to_process %}
                 <input type="hidden" name="selected_entries" value="{{ entry.pk }}">
             {% endfor %}
-            <button type="submit" class="btn btn-warning">Yes, {{ action }} them</button>
-            <a href="{% url 'tracker:entry_list' %}" class="btn btn-secondary">Cancel</a>
+            
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-warning">Yes, Archive Them</button>
+                <a href="{% url 'tracker:entry_list' %}?{{ preserved_filters }}" class="btn btn-secondary">Cancel</a>
+            </div>
         </form>
         {% else %}
-            <a href="{% url 'tracker:entry_list' %}" class="btn btn-primary">Back to Time Entries</a>
+            <a href="{% url 'tracker:entry_list' %}?{{ preserved_filters }}" class="btn btn-primary">Back to List</a>
         {% endif %}
     </div>
 </div>

@@ -123,6 +123,7 @@
 
 <form method="post" id="bulk-action-form">
     {% csrf_token %}
+    <input type="hidden" name="preserved_filters" value="{{ request.GET.urlencode }}">
     <div class="card mb-3">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-2 gap-2">

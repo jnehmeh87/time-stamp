@@ -254,9 +254,11 @@ class TimeEntryDeleteView(LoginRequiredMixin, DeleteView):
 @login_required
 def time_entry_bulk_delete_confirm(request):
     selected_ids = request.POST.getlist('selected_entries')
+    preserved_filters = request.POST.get('preserved_filters', '')
     entries_to_delete = TimeEntry.objects.filter(user=request.user, pk__in=selected_ids)
     context = {
-        'entries_to_delete': entries_to_delete
+        'entries_to_delete': entries_to_delete,
+        'preserved_filters': preserved_filters
     }
     return render(request, 'tracker/timeentry_confirm_delete.html', context)
 
@@ -264,27 +266,37 @@ def time_entry_bulk_delete_confirm(request):
 def time_entry_bulk_delete(request):
     if request.method == 'POST':
         selected_ids = request.POST.getlist('selected_entries')
+        preserved_filters = request.POST.get('preserved_filters', '')
         if selected_ids:
             TimeEntry.objects.filter(user=request.user, pk__in=selected_ids).delete()
             messages.success(request, 'Selected time entries have been deleted.')
+        
+        base_url = reverse('tracker:entry_list')
+        if preserved_filters:
+            return redirect(f'{base_url}?{preserved_filters}')
+        return redirect(base_url)
     return redirect('tracker:entry_list')
 
 @login_required
 def time_entry_bulk_archive_confirm(request):
     selected_ids = request.POST.getlist('selected_entries')
+    preserved_filters = request.POST.get('preserved_filters', '')
     entries_to_process = TimeEntry.objects.filter(user=request.user, pk__in=selected_ids)
     context = {
         'entries_to_process': entries_to_process,
-        'action': 'archive'
+        'action': 'archive',
+        'preserved_filters': preserved_filters
     }
     return render(request, 'tracker/timeentry_confirm_archive.html', context)
 
 @login_required
 def time_entry_bulk_unarchive_confirm(request):
     selected_ids = request.POST.getlist('selected_entries')
+    preserved_filters = request.POST.get('preserved_filters', '')
     entries_to_process = TimeEntry.objects.filter(user=request.user, pk__in=selected_ids)
     context = {
-        'entries_to_process': entries_to_process
+        'entries_to_process': entries_to_process,
+        'preserved_filters': preserved_filters
     }
     return render(request, 'tracker/timeentry_confirm_unarchive.html', context)
 
@@ -293,10 +305,17 @@ def time_entry_bulk_archive(request):
     if request.method == 'POST':
         selected_ids = request.POST.getlist('selected_entries')
         action = request.POST.get('action')
+        preserved_filters = request.POST.get('preserved_filters', '')
+
         if selected_ids and action in ['archive', 'unarchive']:
             is_archived_status = (action == 'archive')
             updated_count = TimeEntry.objects.filter(user=request.user, pk__in=selected_ids).update(is_archived=is_archived_status)
             messages.success(request, f'{updated_count} selected entries have been {action}d.')
+
+        base_url = reverse('tracker:entry_list')
+        if preserved_filters:
+            return redirect(f'{base_url}?{preserved_filters}')
+        return redirect(base_url)
     return redirect('tracker:entry_list')
 
 @login_required
@@ -465,7 +484,8 @@ class AnalyticsDashboardView(LoginRequiredMixin, View):
             time_entries_qs = time_entries_qs.filter(start_time__gte=start_date)
 
         # --- 1. Summary Cards Data ---
-        total_duration = time_entries_qs.aggregate(total=Sum(F('end_time') - F('start_time')))['total'] or timedelta()
+        work_duration = time_entries_qs.filter(category='work').aggregate(total=Sum(F('end_time') - F('start_time')))['total'] or timedelta()
+        personal_duration = time_entries_qs.filter(category='personal').aggregate(total=Sum(F('end_time') - F('start_time')))['total'] or timedelta()
 
         # Calculate total earnings only from projects with an hourly rate > 0
         earnings_entries = time_entries_qs.filter(project__hourly_rate__gt=0)
@@ -553,7 +573,8 @@ class AnalyticsDashboardView(LoginRequiredMixin, View):
                 activity_datasets.append(dataset)
 
         context = {
-            'total_time_tracked': total_duration,
+            'work_duration': work_duration,
+            'personal_duration': personal_duration,
             'total_earnings': total_earnings,
             'active_period': period,
             
