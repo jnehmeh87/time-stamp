@@ -74,16 +74,6 @@ class TimeEntry(models.Model):
         super().save(*args, **kwargs)
 
 class TimeEntryImage(models.Model):
-    time_entry = models.ForeignKey(TimeEntry, related_name='images', on_delete=models.CASCADE)
-    image = models.ImageField(upload_to='time_entry_images/')
-
-    def __str__(self):
-        return f"Image for {self.time_entry.title}"
-        return f"Image for {self.time_entry.title}"
-        m, s = divmod(rem, 60)
-        return f"{h:02d}:{m:02d}:{s:02d}"
-
-class TimeEntryImage(models.Model):
     time_entry = models.ForeignKey(TimeEntry, on_delete=models.CASCADE, related_name='images')
     image = models.ImageField(upload_to='time_entry_images/')
 
@@ -94,4 +84,13 @@ class TimeEntryImage(models.Model):
 
     def __str__(self):
         return f"Image for {self.time_entry.title}"
+    time_entry = models.ForeignKey(TimeEntry, on_delete=models.CASCADE, related_name='images')
+    image = models.ImageField(upload_to='time_entry_images/')
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['time_entry']),
+        ]
+
+    def __str__(self):
         return f"Image for {self.time_entry.title}"
