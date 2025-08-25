@@ -1,5 +1,9 @@
 from django.db import models
 from django.conf import settings
+from django.contrib.auth.models import User
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from django_countries.fields import CountryField
 from datetime import timedelta
 
 CATEGORY_CHOICES = [
@@ -7,9 +11,27 @@ CATEGORY_CHOICES = [
     ('personal', 'Personal'),
 ]
 
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    country = CountryField(blank_label='(select country)', null=True, blank=True)
+    address = models.CharField(max_length=255, blank=True, null=True)
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+
+    def __str__(self):
+        return f'{self.user.username} Profile'
+
+@receiver(post_save, sender=User)
+def create_or_update_user_profile(sender, instance, **kwargs):
+    """
+    Ensure a profile exists for every user.
+    Uses get_or_create to be robust against users created before the profile model.
+    """
+    Profile.objects.get_or_create(user=instance)
+
+
 class Project(models.Model):
-    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    name = models.CharField(max_length=200)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='projects')
+    name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     category = models.CharField(max_length=10, choices=CATEGORY_CHOICES, default='work')
     is_archived = models.BooleanField(default=False)
@@ -57,26 +79,7 @@ class TimeEntryImage(models.Model):
 
     def __str__(self):
         return f"Image for {self.time_entry.title}"
-    def __str__(self):
-        return f"{self.title} ({self.user.username})"
-
-    def clean(self):
-        if self.end_time and self.end_time < self.start_time:
-            raise ValidationError("End time cannot be earlier than start time.")
-
-    @property
-    def duration(self):
-        if self.end_time:
-            total_duration = self.end_time - self.start_time
-            return total_duration - self.paused_duration
-        return None
-
-    def formatted_duration(self):
-        d = self.duration
-        if not d:
-            return ""
-        total = int(d.total_seconds())
-        h, rem = divmod(total, 3600)
+        return f"Image for {self.time_entry.title}"
         m, s = divmod(rem, 60)
         return f"{h:02d}:{m:02d}:{s:02d}"
 

@@ -17,6 +17,7 @@ from datetime import timedelta, date, datetime, time
 from decimal import Decimal
 from collections import defaultdict
 import csv
+from googletrans import Translator, LANGUAGES
 from .utils import render_to_pdf
 
 # --- Home & Timer Views ---
@@ -123,88 +124,75 @@ class TimeEntryListView(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         queryset = super().get_queryset().filter(user=self.request.user)
-        
-        form_data = self.request.GET.copy()
-        
-        # Default date filtering
-        today = timezone.now().date()
-        start_date_str = form_data.get('start_date')
-        end_date_str = form_data.get('end_date')
-        project_id = form_data.get('project')
+        self.filter_form = TimeEntryFilterForm(self.request.GET)
 
-        # If a project is selected and no dates are provided, find the project's date range
-        if project_id and not start_date_str and not end_date_str:
-            project_entries = TimeEntry.objects.filter(project_id=project_id, user=self.request.user)
-            if project_entries.exists():
-                project_range = project_entries.aggregate(
-                    min_date=Min('start_time__date'),
-                    max_date=Max('end_time__date')
-                )
-                if project_range.get('min_date'):
-                    form_data['start_date'] = project_range['min_date'].strftime('%Y-%m-%d')
-                if project_range.get('max_date'):
-                    form_data['end_date'] = project_range['max_date'].strftime('%Y-%m-%d')
-        
-        # If no start date is provided, default to the start of the current month
-        if not form_data.get('start_date'):
-            form_data['start_date'] = today.replace(day=1).strftime('%Y-%m-%d')
-        
-        # If no end date is provided, default to today
-        if not form_data.get('end_date'):
-            form_data['end_date'] = today.strftime('%Y-%m-%d')
+        # Annotate with duration for sorting
+        queryset = queryset.annotate(duration_calc=F('end_time') - F('start_time'))
 
-        self.form = TimeEntryFilterForm(form_data, user=self.request.user)
+        project_id = self.request.GET.get('project')
+        if project_id:
+            queryset = queryset.filter(project_id=project_id)
 
-        if self.form.is_valid():
-            cleaned_data = self.form.cleaned_data
-            if cleaned_data.get('start_date'):
-                queryset = queryset.filter(start_time__date__gte=cleaned_data['start_date'])
-            if cleaned_data.get('end_date'):
-                queryset = queryset.filter(start_time__date__lte=cleaned_data['end_date'])
-            if cleaned_data.get('category'):
-                queryset = queryset.filter(project__category=cleaned_data['category'])
-            if cleaned_data.get('project'):
-                queryset = queryset.filter(project=cleaned_data['project'])
+        if self.filter_form.is_valid():
+            start_date = self.filter_form.cleaned_data.get('start_date')
+            if start_date:
+                queryset = queryset.filter(start_time__date__gte=start_date)
+
+            end_date = self.filter_form.cleaned_data.get('end_date')
+            if end_date:
+                queryset = queryset.filter(end_time__date__lte=end_date)
+
+            category = self.filter_form.cleaned_data.get('category')
+            if category:
+                queryset = queryset.filter(category=category)
             
-            if not cleaned_data.get('show_archived'):
+            if self.filter_form.cleaned_data.get('show_archived'):
+                queryset = queryset.filter(is_archived=True)
+            else:
                 queryset = queryset.filter(is_archived=False)
         else:
             queryset = queryset.filter(is_archived=False)
 
         # Sorting logic
-        sort_by = self.request.GET.get('sort_by', 'start_time')
+        sort_by = self.request.GET.get('sort_by', 'start_time') # Default sort
         sort_dir = self.request.GET.get('sort_dir', 'desc')
         
-        valid_sort_fields = ['title', 'project__name', 'start_time', 'duration', 'category', 'paused_duration']
+        valid_sort_fields = ['title', 'project__name', 'start_time', 'end_time', 'duration', 'category', 'paused_duration']
         
-        if sort_by in valid_sort_fields:
-            if sort_by == 'duration':
-                queryset = queryset.annotate(duration_calc=F('end_time') - F('start_time'))
-                sort_field_db = 'duration_calc'
-            else:
-                sort_field_db = sort_by
+        # Map the 'duration' sort field to our calculated field
+        sort_field_db = 'duration_calc' if sort_by == 'duration' else sort_by
 
+        if sort_by in valid_sort_fields:
             if sort_dir == 'desc':
                 sort_field_db = f'-{sort_field_db}'
             queryset = queryset.order_by(sort_field_db)
         else:
             queryset = queryset.order_by('-start_time')
 
+
         return queryset
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['form'] = self.form
-        context['all_projects'] = Project.objects.filter(user=self.request.user)
         
+        # Prepare data for the template
+        filter_data = self.filter_form.cleaned_data if self.filter_form.is_valid() else {}
+        selected_project_id = self.request.GET.get('project')
+        if selected_project_id:
+            filter_data['project'] = selected_project_id
+        context['filter_form'] = filter_data
+
+        # Pass sorting info to template
         context['sort_by'] = self.request.GET.get('sort_by', 'start_time')
         context['sort_dir'] = self.request.GET.get('sort_dir', 'desc')
-        
-        params = self.request.GET.copy()
-        if 'page' in params:
-            del params['page']
-        context['filter_params'] = params.urlencode()
-        
+
+        # Data for dynamic project dropdown
+        context['all_projects'] = Project.objects.filter(user=self.request.user)
+        latest_work_entry = TimeEntry.objects.filter(user=self.request.user, category='work', project__isnull=False).order_by('-start_time').first()
+        latest_personal_entry = TimeEntry.objects.filter(user=self.request.user, category='personal', project__isnull=False).order_by('-start_time').first()
+        context['latest_work_project_id'] = latest_work_entry.project.id if latest_work_entry else None
+        context['latest_personal_project_id'] = latest_personal_entry.project.id if latest_personal_entry else None
+
         return context
 
 class TimeEntryCreateView(LoginRequiredMixin, CreateView):
@@ -652,119 +640,119 @@ class ReportView(LoginRequiredMixin, View):
         
         return render(request, 'tracker/report_form.html', context)
 
-# @login_required
-# def translate_report(request):
-#     start_date = request.GET.get('start_date')
-#     end_date = request.GET.get('end_date')
-#     project_id = request.GET.get('project')
-#     target_language = request.GET.get('target_language')
-#     export_format = request.GET.get('export')
+@login_required
+def translate_report(request):
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    project_id = request.GET.get('project')
+    target_language = request.GET.get('target_language')
+    export_format = request.GET.get('export')
 
-#     if not all([start_date, end_date, target_language]):
-#         return redirect('tracker:reports')
+    if not all([start_date, end_date, target_language]):
+        return redirect('tracker:reports')
 
-#     entries = TimeEntry.objects.filter(
-#         user=request.user,
-#         start_time__date__gte=start_date,
-#         end_time__date__lte=end_date,
-#         end_time__isnull=False
-#     ).select_related('project')
+    entries = TimeEntry.objects.filter(
+        user=request.user,
+        start_time__date__gte=start_date,
+        end_time__date__lte=end_date,
+        end_time__isnull=False
+    ).select_related('project')
 
-#     if project_id:
-#         entries = entries.filter(project_id=project_id)
+    if project_id:
+        entries = entries.filter(project_id=project_id)
 
-#     translator = Translator()
+    translator = Translator()
 
-#     # --- RTL Language Check ---
-#     RTL_LANGUAGES = ['ar', 'he', 'fa', 'ur']
-#     is_rtl = target_language in RTL_LANGUAGES
+    # --- RTL Language Check ---
+    RTL_LANGUAGES = ['ar', 'he', 'fa', 'ur']
+    is_rtl = target_language in RTL_LANGUAGES
 
-#     # Get the English name of the target language and then translate it.
-#     target_language_english_name = LANGUAGES.get(target_language, target_language).capitalize()
-#     try:
-#         translated_language_name = translator.translate(target_language_english_name, dest=target_language).text
-#     except (TypeError, AttributeError):
-#         # If translation of the language name fails, fall back to the English name
-#         translated_language_name = target_language_english_name
+    # Get the English name of the target language and then translate it.
+    target_language_english_name = LANGUAGES.get(target_language, target_language).capitalize()
+    try:
+        translated_language_name = translator.translate(target_language_english_name, dest=target_language).text
+    except (TypeError, AttributeError):
+        # If translation of the language name fails, fall back to the English name
+        translated_language_name = target_language_english_name
 
-#     # Translate static text for the template
-#     trans_context = {
-#         't_translated_report': translator.translate('Translated Report', dest=target_language).text,
-#         't_project': translator.translate('Project', dest=target_language).text,
-#         't_date_range': translator.translate('Date Range', dest=target_language).text,
-#         't_language': translator.translate('Language', dest=target_language).text,
-#         't_all_projects': translator.translate('All Projects', dest=target_language).text,
-#         't_details': translator.translate('Details', dest=target_language).text,
-#         't_start_time': translator.translate('Start Time', dest=target_language).text,
-#         't_end_time': translator.translate('End Time', dest=target_language).text,
-#         't_duration': translator.translate('Duration', dest=target_language).text,
-#         't_description': translator.translate('Description', dest=target_language).text,
-#         't_notes': translator.translate('Notes', dest=target_language).text,
-#         't_entry': translator.translate('Entry', dest=target_language).text,
-#         't_no_entries': translator.translate('No entries found for this period.', dest=target_language).text,
-#     }
+    # Translate static text for the template
+    trans_context = {
+        't_translated_report': translator.translate('Translated Report', dest=target_language).text,
+        't_project': translator.translate('Project', dest=target_language).text,
+        't_date_range': translator.translate('Date Range', dest=target_language).text,
+        't_language': translator.translate('Language', dest=target_language).text,
+        't_all_projects': translator.translate('All Projects', dest=target_language).text,
+        't_details': translator.translate('Details', dest=target_language).text,
+        't_start_time': translator.translate('Start Time', dest=target_language).text,
+        't_end_time': translator.translate('End Time', dest=target_language).text,
+        't_duration': translator.translate('Duration', dest=target_language).text,
+        't_description': translator.translate('Description', dest=target_language).text,
+        't_notes': translator.translate('Notes', dest=target_language).text,
+        't_entry': translator.translate('Entry', dest=target_language).text,
+        't_no_entries': translator.translate('No entries found for this period.', dest=target_language).text,
+    }
 
-#     translated_entries = []
-#     for entry in entries:
-#         translated_title = translator.translate(entry.title, dest=target_language).text if entry.title else ""
-#         translated_description = translator.translate(entry.description, dest=target_language).text if entry.description else ""
-#         translated_notes = translator.translate(entry.notes, dest=target_language).text if entry.notes else ""
+    translated_entries = []
+    for entry in entries:
+        translated_title = translator.translate(entry.title, dest=target_language).text if entry.title else ""
+        translated_description = translator.translate(entry.description, dest=target_language).text if entry.description else ""
+        translated_notes = translator.translate(entry.notes, dest=target_language).text if entry.notes else ""
 
-#         # Pre-format duration for PDF
-#         duration_str = ""
-#         if entry.duration:
-#             total_seconds = int(entry.duration.total_seconds())
-#             hours, remainder = divmod(total_seconds, 3600)
-#             minutes, seconds = divmod(remainder, 60)
-#             duration_str = f'{hours:02}:{minutes:02}:{seconds:02}'
+        # Pre-format duration for PDF
+        duration_str = ""
+        if entry.duration:
+            total_seconds = int(entry.duration.total_seconds())
+            hours, remainder = divmod(total_seconds, 3600)
+            minutes, seconds = divmod(remainder, 60)
+            duration_str = f'{hours:02}:{minutes:02}:{seconds:02}'
 
-#         translated_entries.append({
-#             'original': entry,
-#             'title': translated_title,
-#             'description': translated_description,
-#             'notes': translated_notes,
-#             'formatted_duration': duration_str,
-#         })
+        translated_entries.append({
+            'original': entry,
+            'title': translated_title,
+            'description': translated_description,
+            'notes': translated_notes,
+            'formatted_duration': duration_str,
+        })
     
-#     project = Project.objects.filter(pk=project_id).first() if project_id else None
+    project = Project.objects.filter(pk=project_id).first() if project_id else None
     
-#     context = {
-#         'entries': translated_entries,
-#         'start_date': start_date,
-#         'end_date': end_date,
-#         'project': project,
-#         'target_language': translated_language_name,
-#         'request': request,
-#         'trans': trans_context,
-#         'is_rtl': is_rtl,
-#     }
+    context = {
+        'entries': translated_entries,
+        'start_date': start_date,
+        'end_date': end_date,
+        'project': project,
+        'target_language': translated_language_name,
+        'request': request,
+        'trans': trans_context,
+        'is_rtl': is_rtl,
+    }
 
-#     if export_format == 'pdf':
-#         pdf = render_to_pdf('tracker/report_pdf.html', context)
-#         if pdf:
-#             response = HttpResponse(pdf, content_type='application/pdf')
-#             filename = f"translated_report_{start_date}_to_{end_date}.pdf"
-#             response['Content-Disposition'] = f'attachment; filename="{filename}"'
-#             return response
+    if export_format == 'pdf':
+        pdf = render_to_pdf('tracker/report_pdf.html', context)
+        if pdf:
+            response = HttpResponse(pdf, content_type='application/pdf')
+            filename = f"translated_report_{start_date}_to_{end_date}.pdf"
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return response
 
-#     if export_format == 'csv':
-#         response = HttpResponse(content_type='text/csv')
-#         response['Content-Disposition'] = f'attachment; filename="translated_report_{start_date}_to_{end_date}.csv"'
-#         writer = csv.writer(response)
-#         writer.writerow([
-#             'Original Title', 'Translated Title', 'Original Description', 'Translated Description',
-#             'Original Notes', 'Translated Notes', 'Project', 'Start Time', 'Duration (HH:MM:SS)'
-#         ])
-#         for item in translated_entries:
-#             entry = item['original']
-#             writer.writerow([
-#                 entry.title, item['title'], entry.description, item['description'],
-#                 entry.notes, item['notes'], entry.project.name if entry.project else '-',
-#                 entry.start_time.strftime('%Y-%m-%d %H:%M:%S'), str(entry.duration)
-#             ])
-#         return response
+    if export_format == 'csv':
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = f'attachment; filename="translated_report_{start_date}_to_{end_date}.csv"'
+        writer = csv.writer(response)
+        writer.writerow([
+            'Original Title', 'Translated Title', 'Original Description', 'Translated Description',
+            'Original Notes', 'Translated Notes', 'Project', 'Start Time', 'Duration (HH:MM:SS)'
+        ])
+        for item in translated_entries:
+            entry = item['original']
+            writer.writerow([
+                entry.title, item['title'], entry.description, item['description'],
+                entry.notes, item['notes'], entry.project.name if entry.project else '-',
+                entry.start_time.strftime('%Y-%m-%d %H:%M:%S'), str(entry.duration)
+            ])
+        return response
 
-#     return render(request, 'tracker/report_translated.html', context)
+    return render(request, 'tracker/report_translated.html', context)
 
 def daily_earnings_tracker(request):
     # If the essential params are not in the request, redirect with defaults.

@@ -2,6 +2,8 @@ from django import forms
 from .models import TimeEntry, Project, TimeEntryImage, CATEGORY_CHOICES
 from django.core.exceptions import ValidationError
 from datetime import date
+from allauth.account.forms import SignupForm
+from django_countries.fields import CountryField
 
 class MultiImageInput(forms.ClearableFileInput):
     allow_multiple_selected = True
@@ -89,8 +91,23 @@ class ReportForm(forms.Form):
             
         self.fields['project'].queryset = projects
 
-class TimeEntryFilterForm(forms.Form):
-    start_date = forms.DateField(required=False, widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}))
-    end_date = forms.DateField(required=False, widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}))
-    category = forms.ChoiceField(choices=[('', 'All'), ('work', 'Work'), ('personal', 'Personal')], required=False, widget=forms.Select(attrs={'class': 'form-select'}))
-    show_archived = forms.BooleanField(required=False, widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}))
+class CustomSignupForm(SignupForm):
+    first_name = forms.CharField(max_length=30, label='First Name', widget=forms.TextInput(attrs={'placeholder': 'First Name'}))
+    last_name = forms.CharField(max_length=30, label='Last Name', widget=forms.TextInput(attrs={'placeholder': 'Last Name'}))
+    country = CountryField(blank_label='(select country)').formfield()
+    address = forms.CharField(max_length=255, label='Address', widget=forms.TextInput(attrs={'placeholder': 'Your address'}))
+    phone_number = forms.CharField(max_length=20, label='Phone Number', widget=forms.TextInput(attrs={'placeholder': 'Your phone number'}))
+
+    def save(self, request):
+        user = super(CustomSignupForm, self).save(request)
+        user.first_name = self.cleaned_data['first_name']
+        user.last_name = self.cleaned_data['last_name']
+        user.save()
+
+        # Save profile data
+        user.profile.country = self.cleaned_data['country']
+        user.profile.address = self.cleaned_data['address']
+        user.profile.phone_number = self.cleaned_data['phone_number']
+        user.profile.save()
+
+        return user

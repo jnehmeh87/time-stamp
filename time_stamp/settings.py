@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     'widget_tweaks',
+    'django_countries',
 
     # Local
     'tracker.apps.TrackerConfig',
@@ -74,6 +75,15 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'time_stamp.wsgi.application'
+
+
+AUTHENTICATION_BACKENDS = [
+    # Needed to login by username in Django admin, regardless of `allauth`
+    'django.contrib.auth.backends.ModelBackend',
+
+    # `allauth` specific authentication methods, such as login by e-mail
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
 
 
 # Database
@@ -117,15 +127,24 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-LOGIN_REDIRECT_URL = '/'
-ACCOUNT_LOGOUT_REDIRECT_URL = '/'
-
 
 # Default primary key field type
-# https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
+# https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Activate Django-Heroku.
-# django_heroku.settings(locals())
-# django_heroku.settings(locals())
+# Email settings for development
+if DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Allauth settings
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = True
+ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
+ACCOUNT_EMAIL_VERIFICATION = 'optional' # Can be 'mandatory' in production
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/'
+
+ACCOUNT_FORMS = {
+    'signup': 'tracker.forms.CustomSignupForm',
+}
