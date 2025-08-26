@@ -97,9 +97,9 @@
 <!-- Chart Row 2 -->
 <div class="row">
     <div class="col-12 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <h4>Activity by Project Over
+        <div class="card" id="activity-chart-card">
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h4 class="mb-0 me-auto">Activity by Project Over
                     {% if active_period == '7d' %}Last 7 Days
                     {% elif active_period == '15d' %}Last 15 Days
                     {% elif active_period == '30d' %}Last 30 Days
@@ -110,12 +110,26 @@
                     {% endif %}
                     (Hours)
                 </h4>
+                <div class="btn-group">
+                    <button id="category-filter-btn" type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        <i class="fas fa-filter me-1"></i>
+                        {% if active_category == 'work' %}Work
+                        {% elif active_category == 'personal' %}Personal
+                        {% else %}All Categories
+                        {% endif %}
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item category-filter-item {% if not active_category or active_category == 'all' %}active{% endif %}" href="?period={{ active_period }}&category=all" data-category="all">All Categories</a></li>
+                        <li><a class="dropdown-item category-filter-item {% if active_category == 'work' %}active{% endif %}" href="?period={{ active_period }}&category=work" data-category="work">Work</a></li>
+                        <li><a class="dropdown-item category-filter-item {% if active_category == 'personal' %}active{% endif %}" href="?period={{ active_period }}&category=personal" data-category="personal">Personal</a></li>
+                    </ul>
+                </div>
             </div>
             <div class="card-body">
                 {% if activity_chart_datasets %}
                     <canvas id="activityLineChart"></canvas>
                 {% else %}
-                    <p class="text-muted">No activity in the last 30 days.</p>
+                    <p class="text-muted">No activity for the selected period and category.</p>
                 {% endif %}
             </div>
         </div>
@@ -205,11 +219,12 @@ document.addEventListener('DOMContentLoaded', function() {
     } catch (e) { console.error("Error rendering earnings chart:", e); }
 
     // 3. Activity Line Chart
+    let activityChart; // Make chart instance accessible
     try {
         const activityLabels = JSON.parse(document.getElementById('activity_chart_labels').textContent);
         const activityDatasets = JSON.parse(document.getElementById('activity_chart_datasets').textContent);
         
-        if (activityDatasets.length > 0) {
+        if (activityDatasets && activityDatasets.length > 0) {
             const lineColors = generateColors(activityDatasets.length);
             const datasetsForChart = activityDatasets.map((dataset, index) => {
                 const color = lineColors[index];
@@ -228,7 +243,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 };
             });
 
-            const activityChart = new Chart(document.getElementById('activityLineChart'), {
+            activityChart = new Chart(document.getElementById('activityLineChart'), {
                 type: 'line',
                 data: {
                     labels: activityLabels,
@@ -297,6 +312,63 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
     } catch (e) { console.error("Error rendering activity chart:", e); }
+
+    // AJAX for category filter
+    document.querySelectorAll('.category-filter-item').forEach(item => {
+        item.addEventListener('click', function(e) {
+            e.preventDefault(); // Prevent default link navigation
+
+            const category = this.dataset.category;
+            const url = new URL(this.href); // Use the href to construct the new URL
+
+            // Add a header to signify an AJAX request
+            fetch(url.toString(), {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Update chart data
+                if (activityChart && data.activity_chart_datasets) {
+                    const newDatasets = data.activity_chart_datasets;
+                    const lineColors = generateColors(newDatasets.length);
+                    activityChart.data.labels = data.activity_chart_labels;
+                    activityChart.data.datasets = newDatasets.map((dataset, index) => {
+                        const color = lineColors[index];
+                        return {
+                            label: dataset.label,
+                            data: dataset.data,
+                            fill: false,
+                            borderColor: color,
+                            originalBorderColor: color,
+                            backgroundColor: color,
+                            borderWidth: 2,
+                            originalBorderWidth: 2,
+                            tension: 0.1,
+                            pointRadius: 2,
+                            pointHoverRadius: 5
+                        };
+                    });
+                    activityChart.update();
+                }
+
+                // Update the URL in the browser
+                history.pushState({}, '', url);
+
+                // Update the dropdown button text
+                document.getElementById('category-filter-btn').innerHTML = `<i class="fas fa-filter me-1"></i> ${this.textContent}`;
+
+                // Update active state on filter items
+                document.querySelectorAll('.category-filter-item').forEach(el => el.classList.remove('active'));
+                this.classList.add('active');
+
+                // Scroll to the chart
+                document.getElementById('activity-chart-card').scrollIntoView({ behavior: 'smooth' });
+            })
+            .catch(error => console.error('Error fetching chart data:', error));
+        });
+    });
 });
 </script>
 {% endblock %}

@@ -451,8 +451,9 @@ class AnalyticsDashboardView(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
         user = request.user
         
-        # --- Date Range Filtering ---
+        # --- Date Range and Category Filtering ---
         period = request.GET.get('period', '30d')
+        category = request.GET.get('category') # Get category from request
         end_date = timezone.now()
         start_date = None
         days_in_period = 30
@@ -482,39 +483,14 @@ class AnalyticsDashboardView(LoginRequiredMixin, View):
         time_entries_qs = TimeEntry.objects.filter(user=user, end_time__isnull=False)
         if start_date:
             time_entries_qs = time_entries_qs.filter(start_time__gte=start_date)
-
-        # --- 1. Summary Cards Data ---
-        work_duration = time_entries_qs.filter(category='work').aggregate(total=Sum(F('end_time') - F('start_time')))['total'] or timedelta()
-        personal_duration = time_entries_qs.filter(category='personal').aggregate(total=Sum(F('end_time') - F('start_time')))['total'] or timedelta()
-
-        # Calculate total earnings only from projects with an hourly rate > 0
-        earnings_entries = time_entries_qs.filter(project__hourly_rate__gt=0)
-        total_earnings = sum(
-            (entry.duration.total_seconds() / 3600) * float(entry.project.hourly_rate)
-            for entry in earnings_entries
-        )
-
-        # --- 2. Doughnut Chart: Time per Category ---
-        time_per_category_chart = time_entries_qs.values('category').annotate(
-            duration_seconds=Sum(F('end_time') - F('start_time'))
-        ).order_by('-duration_seconds')
-
-        category_chart_labels = [item['category'].capitalize() if item['category'] else 'Unassigned' for item in time_per_category_chart]
-        category_chart_data = [item['duration_seconds'].total_seconds() / 3600 for item in time_per_category_chart]
-
-        # --- 3. Bar Chart: Earnings per Project ---
-        earnings_per_project = earnings_entries.values('project__name').annotate(
-            total_seconds=Sum(F('end_time') - F('start_time')),
-            hourly_rate=F('project__hourly_rate')
-        ).order_by('-total_seconds')
-
-        earnings_labels = [item['project__name'] for item in earnings_per_project]
-        earnings_data = [
-            (item['total_seconds'].total_seconds() / 3600) * float(item['hourly_rate'])
-            for item in earnings_per_project
-        ]
+        
+        # Apply category filter to the main queryset if provided
+        if category and category != 'all':
+            time_entries_qs = time_entries_qs.filter(project__category=category)
 
         # --- 4. Line Chart: Activity by Project over selected period ---
+        # (This logic will now run with the filtered queryset)
+        
         # Determine date range for labels
         label_start_date = start_date
         if period == 'all':
@@ -572,11 +548,58 @@ class AnalyticsDashboardView(LoginRequiredMixin, View):
                 }
                 activity_datasets.append(dataset)
 
+        # --- AJAX Request Handling ---
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({
+                'activity_chart_labels': activity_labels,
+                'activity_chart_datasets': activity_datasets,
+            })
+
+        # --- Full Page Load Context ---
+        # The rest of the data is calculated only for a full page load
+        
+        # --- 1. Summary Cards Data ---
+        # Recalculate summary without category filter for the top cards
+        summary_qs = TimeEntry.objects.filter(user=user, end_time__isnull=False)
+        if start_date:
+            summary_qs = summary_qs.filter(start_time__gte=start_date)
+            
+        work_duration = summary_qs.filter(category='work').aggregate(total=Sum(F('end_time') - F('start_time')))['total'] or timedelta()
+        personal_duration = summary_qs.filter(category='personal').aggregate(total=Sum(F('end_time') - F('start_time')))['total'] or timedelta()
+
+        # Calculate total earnings only from projects with an hourly rate > 0
+        earnings_entries = summary_qs.filter(project__hourly_rate__gt=0)
+        total_earnings = sum(
+            (entry.duration.total_seconds() / 3600) * float(entry.project.hourly_rate)
+            for entry in earnings_entries
+        )
+
+        # --- 2. Doughnut Chart: Time per Category ---
+        time_per_category_chart = summary_qs.values('category').annotate(
+            duration_seconds=Sum(F('end_time') - F('start_time'))
+        ).order_by('-duration_seconds')
+
+        category_chart_labels = [item['category'].capitalize() if item['category'] else 'Unassigned' for item in time_per_category_chart]
+        category_chart_data = [item['duration_seconds'].total_seconds() / 3600 for item in time_per_category_chart]
+
+        # --- 3. Bar Chart: Earnings per Project ---
+        earnings_per_project = earnings_entries.values('project__name').annotate(
+            total_seconds=Sum(F('end_time') - F('start_time')),
+            hourly_rate=F('project__hourly_rate')
+        ).order_by('-total_seconds')
+
+        earnings_labels = [item['project__name'] for item in earnings_per_project]
+        earnings_data = [
+            (item['total_seconds'].total_seconds() / 3600) * float(item['hourly_rate'])
+            for item in earnings_per_project
+        ]
+
         context = {
             'work_duration': work_duration,
             'personal_duration': personal_duration,
             'total_earnings': total_earnings,
             'active_period': period,
+            'active_category': category, # Pass active category to template
             
             'category_chart_labels': category_chart_labels,
             'category_chart_data': category_chart_data,
@@ -968,4 +991,92 @@ def ajax_get_project_dates(request):
                 'end_date': dates['end_date'].strftime('%Y-%m-%d'),
             })
     return JsonResponse({'success': False})
-    return JsonResponse({'success': False})
+
+# --- Analytics View ---
+
+def get_analytics_data(user, period='30d', category=None):
+    # This function should contain your logic to calculate all analytics data.
+    # The following is a simplified example.
+    
+    # Determine date range from period
+    now = timezone.now()
+    if period == '7d':
+        start_date = now - timedelta(days=7)
+    elif period == '15d':
+        start_date = now - timedelta(days=15)
+    # ... other periods
+    else: # default to 30d
+        start_date = now - timedelta(days=30)
+
+    # Base queryset
+    time_entries = TimeEntry.objects.filter(user=user, start_time__gte=start_date)
+    
+    # Filter by category if provided and not 'all'
+    if category and category != 'all':
+        time_entries = time_entries.filter(project__category=category)
+
+    # --- Activity Chart Data ---
+    activity_chart_labels = []
+    # Generate labels for the period (e.g., last 30 days)
+    current_date = start_date.date()
+    while current_date <= now.date():
+        activity_chart_labels.append(current_date.strftime('%Y-%m-%d'))
+        current_date += timedelta(days=1)
+
+    project_activity = defaultdict(lambda: defaultdict(float))
+    for entry in time_entries:
+        if entry.end_time:
+            date_str = entry.start_time.strftime('%Y-%m-%d')
+            duration_hours = entry.get_duration().total_seconds() / 3600
+            project_activity[entry.project.name][date_str] += duration_hours
+
+    activity_chart_datasets = []
+    for project_name, date_hours in project_activity.items():
+        data = [date_hours.get(date, 0) for date in activity_chart_labels]
+        activity_chart_datasets.append({
+            'label': project_name,
+            'data': data,
+        })
+
+    # --- Other Chart Data (placeholders) ---
+    # You would also calculate your other chart data here
+    work_duration = timedelta(0)
+    personal_duration = timedelta(0)
+    total_earnings = 0
+    category_chart_labels = []
+    category_chart_data = []
+    earnings_chart_labels = []
+    earnings_chart_data = []
+
+    return {
+        'activity_chart_labels': activity_chart_labels,
+        'activity_chart_datasets': activity_chart_datasets,
+        'work_duration': work_duration,
+        'personal_duration': personal_duration,
+        'total_earnings': total_earnings,
+        'category_chart_labels': category_chart_labels,
+        'category_chart_data': category_chart_data,
+        'earnings_chart_labels': earnings_chart_labels,
+        'earnings_chart_data': earnings_chart_data,
+        'active_period': period,
+        'active_category': category,
+    }
+
+
+@login_required
+def analytics_view(request):
+    period = request.GET.get('period', '30d')
+    category = request.GET.get('category', 'all')
+
+    # Check if it's an AJAX request asking for new chart data
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        # For AJAX, we only need the activity chart data
+        data = get_analytics_data(request.user, period, category)
+        return JsonResponse({
+            'activity_chart_labels': data['activity_chart_labels'],
+            'activity_chart_datasets': data['activity_chart_datasets'],
+        })
+
+    # For a normal page load, get all data and render the template
+    context = get_analytics_data(request.user, period, category)
+    return render(request, 'tracker/analytics.html', context)
