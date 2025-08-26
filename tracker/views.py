@@ -219,12 +219,18 @@ class TimeEntryListView(LoginRequiredMixin, ListView):
 
 class TimeEntryCreateView(LoginRequiredMixin, CreateView):
     model = TimeEntry
-    form_class = TimeEntryForm
+    form_class = TimeEntryUpdateForm
     template_name = 'tracker/timeentry_form.html'
     success_url = reverse_lazy('tracker:entry_list')
 
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user
+        return kwargs
+
     def form_valid(self, form):
         form.instance.user = self.request.user
+        form.instance.is_manual = True  # Mark entry as manually created
         return super().form_valid(form)
 
 class TimeEntryUpdateView(LoginRequiredMixin, UpdateView):

@@ -59,20 +59,22 @@
                                 </div>
                             </div>
                             <div class="col-md-6 mb-3">
-                                <label class="form-label">Category</label>
-                                <div class="d-flex">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="category" id="category_work" value="work" {% if new_category == 'work' or not new_category %}checked{% endif %}>
-                                        <label class="form-check-label" for="category_work">Work</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="category" id="category_personal" value="personal" {% if new_category == 'personal' %}checked{% endif %}>
-                                        <label class="form-check-label" for="category_personal">Personal</label>
-                                    </div>
-                                </div>
+                                <label for="category" class="form-label">Category</label>
+                                <select name="category" id="category" class="form-select">
+                                    <option value="work" {% if new_category == 'work' or not new_category %}selected{% endif %}>Work</option>
+                                    <option value="personal" {% if new_category == 'personal' %}selected{% endif %}>Personal</option>
+                                </select>
                             </div>
                         </div>
-                        <button type="submit" class="btn btn-success btn-lg w-100">Start Timer</button>
+                        <div class="d-grid gap-3 mt-4">
+                            <button type="submit" class="btn btn-success btn-lg">Start Timer</button>
+                            <div class="d-flex align-items-center">
+                                <hr class="flex-grow-1">
+                                <span class="mx-2 text-muted">Or</span>
+                                <hr class="flex-grow-1">
+                            </div>
+                            <a href="{% url 'tracker:entry_create' %}" class="btn btn-outline-secondary btn-lg">Manual Entry</a>
+                        </div>
                     </form>
                 {% endif %}
             </div>
@@ -149,13 +151,13 @@
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const categoryRadios = document.querySelectorAll('input[name="category"]');
+        const categorySelect = document.getElementById('category');
         const projectSelect = document.getElementById('project');
         const projectOptions = Array.from(projectSelect.options);
         const noProjectOption = projectSelect.querySelector('option[value=""]');
 
         function filterProjects() {
-            const selectedCategory = document.querySelector('input[name="category"]:checked').value;
+            const selectedCategory = categorySelect.value;
             const newProjectId = projectSelect.dataset.newProjectId;
 
             let visibleProjects = [];
@@ -203,9 +205,7 @@
             }
         }
 
-        categoryRadios.forEach(radio => {
-            radio.addEventListener('change', filterProjects);
-        });
+        categorySelect.addEventListener('change', filterProjects);
 
         // Initial filter on page load
         filterProjects();
