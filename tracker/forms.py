@@ -1,7 +1,7 @@
 from django import forms
 from .models import TimeEntry, Project, TimeEntryImage, CATEGORY_CHOICES
 from django.core.exceptions import ValidationError
-from datetime import date
+from datetime import date, timedelta
 from allauth.account.forms import SignupForm
 from django_countries.fields import CountryField
 
@@ -9,21 +9,44 @@ class MultiImageInput(forms.ClearableFileInput):
     allow_multiple_selected = True
 
 class TimeEntryUpdateForm(forms.ModelForm):
-    images = forms.ImageField(
-        required=False,
-        widget=MultiImageInput(attrs={'class': 'form-control', 'multiple': True}),
-        help_text="You can select multiple images."
+    images = forms.FileField(
+        widget=MultiImageInput(attrs={'class': 'form-control'}), 
+        required=False, 
+        label="Upload New Images"
+    )
+    pause_hours = forms.IntegerField(
+        label="Hours", min_value=0, required=False, 
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'HH'})
+    )
+    pause_minutes = forms.IntegerField(
+        label="Minutes", min_value=0, max_value=59, required=False, 
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'MM'})
+    )
+    pause_seconds = forms.IntegerField(
+        label="Seconds", min_value=0, max_value=59, required=False, 
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'SS'})
     )
 
     class Meta:
         model = TimeEntry
-        fields = ['title', 'project', 'description', 'notes', 'category', 'images']
+        fields = [
+            'title', 'category', 'project', 'start_time', 'end_time', 
+            'description', 'notes'
+        ]
         widgets = {
+            'start_time': forms.DateTimeInput(
+                attrs={'type': 'datetime-local', 'class': 'form-control'},
+                format='%Y-%m-%dT%H:%M'
+            ),
+            'end_time': forms.DateTimeInput(
+                attrs={'type': 'datetime-local', 'class': 'form-control'},
+                format='%Y-%m-%dT%H:%M'
+            ),
             'title': forms.TextInput(attrs={'class': 'form-control'}),
+            'category': forms.Select(attrs={'class': 'form-select'}),
             'project': forms.Select(attrs={'class': 'form-select'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'category': forms.Select(attrs={'class': 'form-select'}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -33,14 +56,36 @@ class TimeEntryUpdateForm(forms.ModelForm):
             self.fields['project'].queryset = Project.objects.filter(user=user)
             self.fields['project'].empty_label = "No Project"
 
+        # Populate pause fields from the model's paused_duration
+        if self.instance and self.instance.paused_duration:
+            seconds = self.instance.paused_duration.total_seconds()
+            self.fields['pause_hours'].initial = int(seconds // 3600)
+            self.fields['pause_minutes'].initial = int((seconds % 3600) // 60)
+            self.fields['pause_seconds'].initial = int(seconds % 60)
+
+    def clean(self):
+        cleaned_data = super().clean()
+        hours = cleaned_data.get('pause_hours') or 0
+        minutes = cleaned_data.get('pause_minutes') or 0
+        seconds = cleaned_data.get('pause_seconds') or 0
+        
+        # Combine into a timedelta and add to cleaned_data
+        cleaned_data['paused_duration'] = timedelta(hours=hours, minutes=minutes, seconds=seconds)
+        return cleaned_data
+
     def save(self, commit=True):
-        instance = super().save(commit=commit)
-        image_files = self.files.getlist('images')
-        if commit and image_files:
-            TimeEntryImage.objects.bulk_create([
-                TimeEntryImage(time_entry=instance, image=img) for img in image_files
-            ])
-        return instance
+        # Set the model's paused_duration from our cleaned data
+        self.instance.paused_duration = self.cleaned_data['paused_duration']
+        
+        # Save the TimeEntry instance first
+        entry = super().save(commit=commit)
+
+        # Now, handle the uploaded images
+        if commit:
+            for image_file in self.files.getlist('images'):
+                TimeEntryImage.objects.create(time_entry=entry, image=image_file)
+        
+        return entry
 
 class TimeEntryForm(forms.ModelForm):
     class Meta:

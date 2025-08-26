@@ -53,6 +53,7 @@ class TimeEntry(models.Model):
     is_paused = models.BooleanField(default=False)
     last_pause_time = models.DateTimeField(null=True, blank=True)
     paused_duration = models.DurationField(default=timedelta(0))
+    is_manual = models.BooleanField(default=False)  # Add this field
 
     class Meta:
         ordering = ['-start_time']

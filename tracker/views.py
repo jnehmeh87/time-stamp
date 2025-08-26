@@ -121,7 +121,7 @@ class TimeEntryListView(LoginRequiredMixin, ListView):
     model = TimeEntry
     template_name = 'tracker/timeentry_list.html'
     context_object_name = 'entries'
-    paginate_by = 25
+    paginate_by = 15
 
     def get_paginate_by(self, queryset):
         """
@@ -240,6 +240,14 @@ class TimeEntryUpdateView(LoginRequiredMixin, UpdateView):
 
     def get_queryset(self):
         return super().get_queryset().filter(user=self.request.user)
+
+    def form_valid(self, form):
+        # Check if start, end time, or pause duration was changed
+        changed_fields = form.changed_data
+        pause_fields = ['pause_hours', 'pause_minutes', 'pause_seconds']
+        if 'start_time' in changed_fields or 'end_time' in changed_fields or any(f in changed_fields for f in pause_fields):
+            form.instance.is_manual = True
+        return super().form_valid(form)
 
 class TimeEntryDeleteView(LoginRequiredMixin, DeleteView):
     model = TimeEntry
