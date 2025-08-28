@@ -89,11 +89,21 @@
                 {% for entry in recent_entries %}
                 <li class="list-group-item recent-entry" {% if forloop.counter > 5 %}style="display: none;"{% endif %}>
                     <div class="d-flex w-100 justify-content-between">
-                        <h6 class="mb-1">{{ entry.title }}</h6>
+                        <h6 class="mb-1">
+                            <a href="#" class="text-decoration-none text-dark view-details-btn" 
+                               data-entry-id="{{ entry.pk }}" 
+                               data-bs-toggle="modal" 
+                               data-bs-target="#entryDetailsModal">
+                                {{ entry.title }}
+                            </a>
+                        </h6>
                         <small>{{ entry.formatted_duration }}</small>
                     </div>
                     <p class="mb-1 text-muted small">
                         {{ entry.project.name|default:"No Project" }} | {{ entry.get_category_display }}
+                    </p>
+                    <p class="mb-0 text-muted small">
+                        {{ entry.start_time|date:"D, j M Y" }} &bull; {{ entry.start_time|date:"g:i A" }} - {{ entry.end_time|date:"g:i A" }}
                     </p>
                 </li>
                 {% endfor %}
@@ -107,6 +117,55 @@
         </div>
     </div>
     {% endif %}
+
+    <!-- Details Modal -->
+    <div class="modal fade" id="entryDetailsModal" tabindex="-1" aria-labelledby="entryDetailsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="entryDetailsModalLabel">Time Entry Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="modal-spinner" class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                    <div id="modal-content-area" class="d-none">
+                        <h4 id="modal-title"></h4>
+                        <p>
+                            <strong>Project:</strong> <span id="modal-project"></span><br>
+                            <strong>Category:</strong> <span id="modal-category"></span>
+                        </p>
+                        <hr>
+                        <p>
+                            <strong>Start:</strong> <span id="modal-start-time"></span><br>
+                            <strong>End:</strong> <span id="modal-end-time"></span><br>
+                            <strong>Duration:</strong> <span id="modal-duration"></span><br>
+                            <strong>Pause:</strong> <span id="modal-pause"></span>
+                        </p>
+                        <hr>
+                        <h5>Description</h5>
+                        <p id="modal-description"></p>
+                        <h5>Notes</h5>
+                        <p id="modal-notes"></p>
+                        
+                        <div id="modal-images-section">
+                            <h5>Images</h5>
+                            <div id="modal-images-gallery" class="row">
+                                <!-- Images will be injected here by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <a href="#" id="modal-edit-button" class="btn btn-primary">Edit this Entry</a>
+                </div>
+            </div>
+        </div>
+    </div>
 
     {% if active_entry %}
     <script>
@@ -236,6 +295,65 @@
                 });
                 showMoreBtn.style.display = 'inline-block';
                 showLessBtn.style.display = 'none';
+            });
+        }
+
+        // Modal Details Logic
+        const entryDetailsModal = document.getElementById('entryDetailsModal');
+        if (entryDetailsModal) {
+            const modalSpinner = document.getElementById('modal-spinner');
+            const modalContent = document.getElementById('modal-content-area');
+
+            entryDetailsModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+                const entryId = button.dataset.entryId;
+
+                // Show spinner, hide content
+                modalSpinner.classList.remove('d-none');
+                modalContent.classList.add('d-none');
+
+                fetch(`/ajax/get-entry-details/${entryId}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            // Populate modal
+                            document.getElementById('modal-title').textContent = data.title;
+                            document.getElementById('modal-project').textContent = data.project;
+                            document.getElementById('modal-category').textContent = data.category;
+                            document.getElementById('modal-start-time').textContent = data.start_time;
+                            document.getElementById('modal-end-time').textContent = data.end_time;
+                            document.getElementById('modal-duration').textContent = data.duration;
+                            document.getElementById('modal-pause').textContent = data.paused_duration;
+                            document.getElementById('modal-description').textContent = data.description;
+                            document.getElementById('modal-notes').textContent = data.notes;
+                            document.getElementById('modal-edit-button').href = data.update_url;
+
+                            const gallery = document.getElementById('modal-images-gallery');
+                            const imagesSection = document.getElementById('modal-images-section');
+                            gallery.innerHTML = ''; // Clear previous images
+
+                            if (data.images && data.images.length > 0) {
+                                data.images.forEach(img => {
+                                    const col = document.createElement('div');
+                                    col.className = 'col-md-4 mb-3';
+                                    col.innerHTML = `<a href="${img.url}" target="_blank"><img src="${img.url}" class="img-fluid rounded" alt="Entry Image"></a>`;
+                                    gallery.appendChild(col);
+                                });
+                                imagesSection.classList.remove('d-none');
+                            } else {
+                                imagesSection.classList.add('d-none');
+                            }
+
+                            // Hide spinner, show content
+                            modalSpinner.classList.add('d-none');
+                            modalContent.classList.remove('d-none');
+                        } else {
+                            // Handle error
+                            document.getElementById('modal-content-area').innerHTML = `<p class="text-danger">Error: ${data.error}</p>`;
+                            modalSpinner.classList.add('d-none');
+                            modalContent.classList.remove('d-none');
+                        }
+                    });
             });
         }
     });

@@ -6,21 +6,18 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1>My Time Entries</h1>
-    <a href="{% url 'tracker:entry_create' %}" class="btn btn-primary">
-        <i class="fas fa-plus me-1"></i> New Manual Entry
-    </a>
-</div>
-
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div class="btn-group" role="group" aria-label="View switcher">
-        <button type="button" class="btn btn-outline-secondary active" id="table-view-btn" title="List View">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-list-ul" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M5 11.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m-3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2m0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2m0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/></svg>
-        </button>
-        <button type="button" class="btn btn-outline-secondary" id="card-view-btn" title="Card View">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-grid-3x2-gap-fill" viewBox="0 0 16 16"><path d="M1 4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1zM1 9a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1z"/></svg>
-        </button>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="btn-group" role="group" aria-label="View switcher">
+            <button type="button" class="btn btn-outline-secondary active" id="table-view-btn" title="List View">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-list-ul" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M5 11.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m-3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2m0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2m0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/></svg>
+            </button>
+            <button type="button" class="btn btn-outline-secondary" id="card-view-btn" title="Card View">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-grid-3x2-gap-fill" viewBox="0 0 16 16"><path d="M1 4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1zM1 9a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1z"/></svg>
+            </button>
+        </div>
     </div>
 </div>
+
 
 <!-- Desktop Filter (Visible on LG screens and up) -->
 <div class="card mb-4 d-none d-lg-block">
@@ -139,13 +136,20 @@
                         Select all
                     </label>
                 </div>
-                <div class="d-flex gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <small class="text-muted fst-italic me-2 d-none d-sm-inline">
+                        <span title="Time was edited"><i class="fas fa-pen"></i> = Edited</span>
+                        <span class="ms-2" title="Manually created"><i class="fas fa-plus-circle"></i> = Manual</span>
+                    </small>
                     {% if form.show_archived.value %}
-                        <button type="submit" class="btn btn-secondary archive-action-btn" id="bulk-unarchive-btn" disabled formaction="{% url 'tracker:entry_bulk_unarchive_confirm' %}">Unarchive</button>
+                    <button type="submit" class="btn btn-secondary archive-action-btn" id="bulk-unarchive-btn" disabled formaction="{% url 'tracker:entry_bulk_unarchive_confirm' %}">Unarchive</button>
                     {% else %}
-                        <button type="submit" class="btn btn-warning archive-action-btn" id="bulk-archive-btn" disabled formaction="{% url 'tracker:entry_bulk_archive_confirm' %}">Archive</button>
+                    <button type="submit" class="btn btn-warning archive-action-btn" id="bulk-archive-btn" disabled formaction="{% url 'tracker:entry_bulk_archive_confirm' %}">Archive</button>
                     {% endif %}
                     <button type="submit" class="btn btn-danger" id="bulk-delete-btn" disabled formaction="{% url 'tracker:entry_bulk_delete_confirm' %}">Delete</button>
+                    <a href="{% url 'tracker:entry_create' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-1"></i> New Manual Entry
+                    </a>
                 </div>
             </div>
             
@@ -156,6 +160,11 @@
                         <thead>
                             <tr id="sortable-headers">
                                 <th data-column-id="checkbox"></th><!-- Checkbox column -->
+                                <th class="text-center" data-column-id="status">
+                                    <a href="?{% sort_url 'is_manual' %}" class="text-decoration-none text-reset">
+                                        Status {% if sort_by == 'is_manual' %}{% if sort_dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}{% endif %}
+                                    </a>
+                                </th>
                                 <th class="text-center" data-column-id="task">
                                     <a href="?{% sort_url 'title' %}" class="text-decoration-none text-reset">
                                         Task {% if sort_by == 'title' %}{% if sort_dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}{% endif %}
@@ -187,37 +196,37 @@
                                         Category {% if sort_by == 'category' %}{% if sort_dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}{% endif %}
                                     </a>
                                 </th>
-                                <th class="text-center" data-column-id="description">Description</th>
-                                <th class="text-center" data-column-id="notes">Notes</th>
-                                <th class="text-center" data-column-id="image">Image</th>
                             </tr>
                         </thead>
                         <tbody id="table-body">
                             {% for entry in entries %}
                             <tr class="{% if entry.is_archived %}table-warning{% endif %}">
                                 <td class="text-center" data-column-id="checkbox"><input class="form-check-input entry-checkbox" type="checkbox" name="selected_entries" value="{{ entry.pk }}"></td>
-                                <td class="text-center" data-column-id="task"><a href="{% url 'tracker:entry_update' entry.pk %}">{{ entry.title }}</a></td>
+                                <td class="text-center" data-column-id="status">
+                                    {% if entry.is_manual %}
+                                        <i class="fas fa-plus-circle text-muted" title="This entry was manually created."></i>
+                                    {% elif entry.was_edited %}
+                                        <i class="fas fa-pencil-alt text-muted" title="This entry's time was edited."></i>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center" data-column-id="task">
+                                    <a href="#" class="text-decoration-none view-details-btn" 
+                                       data-entry-id="{{ entry.pk }}" 
+                                       data-bs-toggle="modal" 
+                                       data-bs-target="#entryDetailsModal">
+                                        {{ entry.title }}
+                                    </a>
+                                </td>
                                 <td class="text-center" data-column-id="project">{{ entry.project.name|default:"-" }}</td>
                                 <td class="text-center" data-column-id="date">{{ entry.start_time|date:"D j/n/Y" }}</td>
                                 <td class="text-center" data-column-id="start_time">{{ entry.start_time|date:"g:i A" }} - {{ entry.end_time|date:"g:i A" }}</td>
                                 <td class="text-center" data-column-id="duration">{{ entry.duration|human_duration }}</td>
                                 <td class="text-center" data-column-id="paused_time">{{ entry.paused_duration|human_duration }}</td>
                                 <td class="text-center" data-column-id="category">{{ entry.get_category_display }}</td>
-                                <td class="text-center" data-column-id="description">{{ entry.description|truncatechars:30|default:"-" }}</td>
-                                <td class="text-center" data-column-id="notes">{{ entry.notes|truncatechars:30|default:"-" }}</td>
-                                <td class="text-center" data-column-id="image">
-                                    {% if entry.image %}
-                                        <a href="{{ entry.image.url }}" target="_blank">
-                                            <img src="{{ entry.image.url }}" alt="{{ entry.title }} image" style="max-width: 50px; max-height: 50px; object-fit: cover;">
-                                        </a>
-                                    {% else %}
-                                        -
-                                    {% endif %}
-                                </td>
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="12" class="text-center">No time entries found.</td>
+                                <td colspan="9" class="text-center">No time entries found.</td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -229,19 +238,20 @@
             <div id="card-view-container" class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3" style="display: none;">
                 {% for entry in entries %}
                 <div class="col">
-                    <div class="card h-100 {% if entry.is_archived %}bg-warning bg-opacity-25{% endif %}">
+                    <div class="card h-100 clickable-card view-details-btn {% if entry.is_archived %}bg-warning bg-opacity-25{% endif %}" 
+                         data-entry-id="{{ entry.pk }}" 
+                         data-bs-toggle="modal" 
+                         data-bs-target="#entryDetailsModal">
                         {% with entry.images.first as first_image %}
                             {% if first_image %}
-                                <a href="{{ first_image.image.url }}" target="_blank">
-                                    <img src="{{ first_image.image.url }}" class="card-img-top" alt="{{ entry.title }} image" style="height: 180px; object-fit: cover;">
-                                </a>
+                                <img src="{{ first_image.image.url }}" class="card-img-top" alt="{{ entry.title }} image" style="height: 180px; object-fit: cover;">
                             {% endif %}
                         {% endwith %}
                         <div class="card-header d-flex justify-content-between align-items-start">
-                            <input class="form-check-input entry-checkbox mt-1" type="checkbox" name="selected_entries" value="{{ entry.pk }}">
-                            <a href="{% url 'tracker:entry_update' entry.pk %}" class="text-decoration-none text-reset flex-grow-1 ms-2">
+                            <input class="form-check-input entry-checkbox mt-1" type="checkbox" name="selected_entries" value="{{ entry.pk }}" onclick="event.stopPropagation();">
+                            <div class="flex-grow-1 ms-2">
                                 <h5 class="mb-0">{{ entry.title }}</h5>
-                            </a>
+                            </div>
                         </div>
                         <div class="card-body">
                             <p class="card-text">
@@ -251,13 +261,12 @@
                                 {% if entry.paused_duration %}
                                   |  <span class="badge bg-warning text-dark">Pause: {{ entry.paused_duration|human_duration }}</span>
                                 {% endif %}
+                                {% if entry.is_manual %}
+                                  | <span class="badge bg-primary text-white" title="Manually created"><i class="fas fa-plus-circle"></i> Manual</span>
+                                {% elif entry.was_edited %}
+                                  | <span class="badge bg-info text-dark" title="Time was edited"><i class="fas fa-pen"></i> Edited</span>
+                                {% endif %}
                             </p>
-                            {% if entry.description %}
-                                <p class="card-text small"><strong>Description:</strong> {{ entry.description|truncatechars:100 }}</p>
-                            {% endif %}
-                            {% if entry.notes %}
-                                <p class="card-text small"><strong>Notes:</strong> {{ entry.notes|truncatechars:100 }}</p>
-                            {% endif %}
                             <p class="card-text small text-muted">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" class="bi bi-calendar-event me-1" viewBox="0 0 16 16"><path d="M11 6.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5z"/><path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5M1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4z"/></svg>
                                 {{ entry.start_time|date:"D, j M Y" }}
@@ -316,6 +325,54 @@
 </nav>
 {% endif %}
 
+<!-- Details Modal -->
+<div class="modal fade" id="entryDetailsModal" tabindex="-1" aria-labelledby="entryDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="entryDetailsModalLabel">Time Entry Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="modal-spinner" class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                <div id="modal-content-area" class="d-none">
+                    <h4 id="modal-title"></h4>
+                    <p>
+                        <strong>Project:</strong> <span id="modal-project"></span><br>
+                        <strong>Category:</strong> <span id="modal-category"></span>
+                    </p>
+                    <hr>
+                    <p>
+                        <strong>Start:</strong> <span id="modal-start-time"></span><br>
+                        <strong>End:</strong> <span id="modal-end-time"></span><br>
+                        <strong>Duration:</strong> <span id="modal-duration"></span><br>
+                        <strong>Pause:</strong> <span id="modal-pause"></span>
+                    </p>
+                    <hr>
+                    <h5>Description</h5>
+                    <p id="modal-description"></p>
+                    <h5>Notes</h5>
+                    <p id="modal-notes"></p>
+                    
+                    <div id="modal-images-section">
+                        <h5>Images</h5>
+                        <div id="modal-images-gallery" class="row">
+                            <!-- Images will be injected here by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="#" id="modal-edit-button" class="btn btn-primary">Edit this Entry</a>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -329,20 +386,21 @@
     padding: 0; /* Remove padding from the empty checkbox header cell */
 }
 /* Columns that should not wrap */
-.table th:nth-child(2), .table td:nth-child(2), /* Title */
-.table th:nth-child(3), .table td:nth-child(3), /* Project */
-.table th:nth-child(6), .table td:nth-child(6), /* Image */
-.table th:nth-child(7), .table td:nth-child(7), /* Date */
-.table th:nth-child(8), .table td:nth-child(8), /* Start Time */
-.table th:nth-child(9), .table td:nth-child(9), /* End Time */
-.table th:nth-child(10), .table td:nth-child(10), /* Duration */
-.table th:nth-child(11), .table td:nth-child(11) /* Category */
+.table th:nth-child(2), .table td:nth-child(2), /* Status */
+.table th:nth-child(3), .table td:nth-child(3), /* Title */
+.table th:nth-child(4), .table td:nth-child(4), /* Project */
+.table th:nth-child(7), .table td:nth-child(7), /* Image */
+.table th:nth-child(8), .table td:nth-child(8), /* Date */
+.table th:nth-child(9), .table td:nth-child(9), /* Start Time */
+.table th:nth-child(10), .table td:nth-child(10), /* End Time */
+.table th:nth-child(11), .table td:nth-child(11), /* Duration */
+.table th:nth-child(12), .table td:nth-child(12) /* Category */
 {
     white-space: nowrap;
 }
 /* Columns that can wrap but have a minimum width */
-.table th:nth-child(4), .table td:nth-child(4), /* Description */
-.table th:nth-child(5), .table td:nth-child(5)  /* Notes */
+.table th:nth-child(5), .table td:nth-child(5), /* Description */
+.table th:nth-child(6), .table td:nth-child(6)  /* Notes */
 {
     min-width: 200px;
 }
@@ -363,6 +421,15 @@
 }
 .card-header [aria-expanded="true"] .filter-toggle-icon {
     transform: rotate(45deg);
+}
+
+.clickable-card {
+    cursor: pointer;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+.clickable-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 /* --- Action Button Width Fix --- */
@@ -664,7 +731,63 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     toggleBulkActionButtons(); // Initial check on page load
+
+    // --- Entry Details Modal ---
+    const entryDetailsModal = document.getElementById('entryDetailsModal');
+    const modalSpinner = document.getElementById('modal-spinner');
+    const modalContent = document.getElementById('modal-content-area');
+
+    entryDetailsModal.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        const entryId = button.dataset.entryId;
+
+        // Show spinner, hide content
+        modalSpinner.classList.remove('d-none');
+        modalContent.classList.add('d-none');
+
+        fetch(`/ajax/get-entry-details/${entryId}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Populate modal
+                    document.getElementById('modal-title').textContent = data.title;
+                    document.getElementById('modal-project').textContent = data.project;
+                    document.getElementById('modal-category').textContent = data.category;
+                    document.getElementById('modal-start-time').textContent = data.start_time;
+                    document.getElementById('modal-end-time').textContent = data.end_time;
+                    document.getElementById('modal-duration').textContent = data.duration;
+                    document.getElementById('modal-pause').textContent = data.paused_duration;
+                    document.getElementById('modal-description').textContent = data.description;
+                    document.getElementById('modal-notes').textContent = data.notes;
+                    document.getElementById('modal-edit-button').href = data.update_url;
+
+                    const gallery = document.getElementById('modal-images-gallery');
+                    const imagesSection = document.getElementById('modal-images-section');
+                    gallery.innerHTML = ''; // Clear previous images
+
+                    if (data.images && data.images.length > 0) {
+                        data.images.forEach(img => {
+                            const col = document.createElement('div');
+                            col.className = 'col-md-4 mb-3';
+                            col.innerHTML = `<a href="${img.url}" target="_blank"><img src="${img.url}" class="img-fluid rounded" alt="Entry Image"></a>`;
+                            gallery.appendChild(col);
+                        });
+                        imagesSection.classList.remove('d-none');
+                    } else {
+                        imagesSection.classList.add('d-none');
+                    }
+
+                    // Hide spinner, show content
+                    modalSpinner.classList.add('d-none');
+                    modalContent.classList.remove('d-none');
+                } else {
+                    // Handle error
+                    document.getElementById('modal-content-area').innerHTML = `<p class="text-danger">Error: ${data.error}</p>`;
+                    modalSpinner.classList.add('d-none');
+                    modalContent.classList.remove('d-none');
+                }
+            });
+    });
 });
 </script>
-
 {% endblock %}

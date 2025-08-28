@@ -40,6 +40,8 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'widget_tweaks',
     'django_countries',
+    'crispy_forms',
+    'crispy_bootstrap5',
 
     # Local
     'tracker.apps.TrackerConfig',
@@ -155,3 +157,6 @@ LOGOUT_REDIRECT_URL = '/'
 ACCOUNT_FORMS = {
     'signup': 'tracker.forms.CustomSignupForm',
 }
+
+CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
+CRISPY_TEMPLATE_PACK = "bootstrap5"

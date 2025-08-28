@@ -77,13 +77,8 @@ class TimeEntryUpdateForm(forms.ModelForm):
         # Set the model's paused_duration from our cleaned data
         self.instance.paused_duration = self.cleaned_data['paused_duration']
         
-        # Save the TimeEntry instance first
+        # The view will handle saving the images.
         entry = super().save(commit=commit)
-
-        # Now, handle the uploaded images
-        if commit:
-            for image_file in self.files.getlist('images'):
-                TimeEntryImage.objects.create(time_entry=entry, image=image_file)
         
         return entry
 

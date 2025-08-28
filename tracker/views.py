@@ -8,7 +8,7 @@ from django.db import transaction
 from django.utils import timezone
 from django.urls import reverse_lazy, reverse
 from urllib.parse import urlencode
-from .models import TimeEntry, Project
+from .models import TimeEntry, Project, TimeEntryImage
 from .forms import TimeEntryForm, ProjectForm, TimeEntryFilterForm, ReportForm, TimeEntryUpdateForm
 from django.contrib import messages
 from django.db.models import Sum, F, ExpressionWrapper, DurationField, Min, Max, Count
@@ -19,7 +19,7 @@ from decimal import Decimal
 from collections import defaultdict
 import csv
 from googletrans import Translator, LANGUAGES
-from .utils import render_to_pdf
+from .utils import render_to_pdf, format_duration_hms
 
 # --- Home & Timer Views ---
 
@@ -220,7 +220,7 @@ class TimeEntryListView(LoginRequiredMixin, ListView):
 class TimeEntryCreateView(LoginRequiredMixin, CreateView):
     model = TimeEntry
     form_class = TimeEntryUpdateForm
-    template_name = 'tracker/timeentry_form.html'
+    template_name = 'tracker/timeentry_create_form.html' # Use the new create template
     success_url = reverse_lazy('tracker:entry_list')
 
     def get_form_kwargs(self):
@@ -230,14 +230,27 @@ class TimeEntryCreateView(LoginRequiredMixin, CreateView):
 
     def form_valid(self, form):
         form.instance.user = self.request.user
-        form.instance.is_manual = True  # Mark entry as manually created
-        return super().form_valid(form)
+        form.instance.is_manual = True  # This is a manually created entry.
+        form.instance.was_edited = False # It has not been "edited" yet.
+        
+        # Let the parent view handle saving the form and creating the redirect.
+        response = super().form_valid(form)
+
+        # Now that the main object is saved (as self.object), handle image uploads.
+        for image_file in self.request.FILES.getlist('images'):
+            TimeEntryImage.objects.create(time_entry=self.object, image=image_file)
+            
+        return response
 
 class TimeEntryUpdateView(LoginRequiredMixin, UpdateView):
     model = TimeEntry
     form_class = TimeEntryUpdateForm
-    template_name = 'tracker/timeentry_form.html'
+    template_name = 'tracker/timeentry_update_form.html' # Use the new update template
     success_url = reverse_lazy('tracker:entry_list')
+
+    def get_object(self, queryset=None):
+        # We no longer need to store original values here.
+        return super().get_object(queryset)
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -248,12 +261,23 @@ class TimeEntryUpdateView(LoginRequiredMixin, UpdateView):
         return super().get_queryset().filter(user=self.request.user)
 
     def form_valid(self, form):
-        # Check if start, end time, or pause duration was changed
-        changed_fields = form.changed_data
-        pause_fields = ['pause_hours', 'pause_minutes', 'pause_seconds']
-        if 'start_time' in changed_fields or 'end_time' in changed_fields or any(f in changed_fields for f in pause_fields):
-            form.instance.is_manual = True
-        return super().form_valid(form)
+        # Check the hidden input flag from the POST data.
+        time_details_were_edited = self.request.POST.get('time_details_edited_flag') == 'true'
+
+        # Set the flag ONLY if the user explicitly edited the time details.
+        # Do not touch the is_manual flag here.
+        if time_details_were_edited:
+            form.instance.was_edited = True
+
+        # Let the parent view handle saving the form and creating the redirect response.
+        # This also sets self.object for us to use.
+        response = super().form_valid(form)
+
+        # Now that the main object is saved, handle the image uploads.
+        for image_file in self.request.FILES.getlist('images'):
+            TimeEntryImage.objects.create(time_entry=self.object, image=image_file)
+            
+        return response
 
 class TimeEntryDeleteView(LoginRequiredMixin, DeleteView):
     model = TimeEntry
@@ -432,6 +456,54 @@ def project_toggle_archive(request, pk):
 
 
 # --- AJAX Views ---
+
+@login_required
+def get_time_entry_details(request, pk):
+    try:
+        entry = TimeEntry.objects.select_related('project').prefetch_related('images').get(pk=pk, user=request.user)
+        images = [{'url': img.image.url, 'id': img.id} for img in entry.images.all()]
+        
+        # --- Correctly calculate and format durations ---
+        worked_duration = timedelta(0)
+        if entry.end_time:
+            gross_duration = entry.end_time - entry.start_time
+            # Ensure worked duration is not negative
+            if gross_duration > entry.paused_duration:
+                worked_duration = gross_duration - entry.paused_duration
+        
+        formatted_duration = format_duration_hms(worked_duration)
+        formatted_paused_duration = format_duration_hms(entry.paused_duration)
+        # --- End of formatting ---
+
+        data = {
+            'success': True,
+            'title': entry.title,
+            'project': entry.project.name if entry.project else 'No Project',
+            'category': entry.get_category_display(),
+            'start_time': entry.start_time.strftime('%Y-%m-%d %H:%M:%S'),
+            'end_time': entry.end_time.strftime('%Y-%m-%d %H:%M:%S') if entry.end_time else 'In Progress',
+            'duration': formatted_duration,
+            'paused_duration': formatted_paused_duration,
+            'description': entry.description or 'No description provided.',
+            'notes': entry.notes or 'No notes provided.',
+            'images': images,
+            'update_url': reverse('tracker:entry_update', kwargs={'pk': entry.pk}),
+        }
+        return JsonResponse(data)
+    except TimeEntry.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Entry not found.'}, status=404)
+
+@login_required
+def delete_time_entry_image(request, pk):
+    if request.method == 'POST':
+        try:
+            image = TimeEntryImage.objects.get(pk=pk, time_entry__user=request.user)
+            image.delete()
+            return JsonResponse({'success': True})
+        except TimeEntryImage.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Image not found.'}, status=404)
+    return JsonResponse({'success': False, 'error': 'Invalid request method.'}, status=400)
+
 
 @login_required
 def get_projects_for_category(request):
@@ -1092,5 +1164,7 @@ def analytics_view(request):
         })
 
     # For a normal page load, get all data and render the template
+    context = get_analytics_data(request.user, period, category)
+    return render(request, 'tracker/analytics.html', context)
     context = get_analytics_data(request.user, period, category)
     return render(request, 'tracker/analytics.html', context)

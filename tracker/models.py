@@ -54,6 +54,7 @@ class TimeEntry(models.Model):
     last_pause_time = models.DateTimeField(null=True, blank=True)
     paused_duration = models.DurationField(default=timedelta(0))
     is_manual = models.BooleanField(default=False)  # Add this field
+    was_edited = models.BooleanField(default=False) # Add this line
 
     class Meta:
         ordering = ['-start_time']

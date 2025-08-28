@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Edit Time Entry{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3>Edit Time Entry</h3>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    {{ form.non_field_errors }}
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">{{ form.title|as_crispy_field }}</div>
+                        <div class="col-md-4 mb-3">{{ form.category|as_crispy_field }}</div>
+                        <div class="col-md-4 mb-3">{{ form.project|as_crispy_field }}</div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Time Details Section -->
+                    <div id="time-details-display">
+                        <h5>Time Details</h5>
+                        <p>
+                            <strong>Start:</strong> {{ object.start_time|date:"Y-m-d H:i:s" }}<br>
+                            <strong>End:</strong> {{ object.end_time|date:"Y-m-d H:i:s" }}<br>
+                            <strong>Pause:</strong> {{ object.paused_duration }}
+                        </p>
+                        <button type="button" id="edit-time-btn" class="btn btn-secondary btn-sm mb-3">Edit Time Details</button>
+                    </div>
+
+                    <div id="time-details-edit" class="d-none">
+                        <h5>Edit Time Details</h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">{{ form.start_time|as_crispy_field }}</div>
+                            <div class="col-md-6 mb-3">{{ form.end_time|as_crispy_field }}</div>
+                        </div>
+                        <div class="row align-items-end">
+                            <div class="col-md-4 mb-3">{{ form.pause_hours|as_crispy_field }}</div>
+                            <div class="col-md-4 mb-3">{{ form.pause_minutes|as_crispy_field }}</div>
+                            <div class="col-md-4 mb-3">{{ form.pause_seconds|as_crispy_field }}</div>
+                        </div>
+                    </div>
+                    <input type="hidden" name="time_details_edited_flag" id="time_details_edited_flag" value="false">
+                    <hr>
+
+                    <div class="mb-3">{{ form.description|as_crispy_field }}</div>
+                    <div class="mb-3">{{ form.notes|as_crispy_field }}</div>
+                    
+                    <!-- Existing Images -->
+                    {% if object.images.all %}
+                    <h5>Existing Images</h5>
+                    <div class="row" id="existing-images-container">
+                        {% for image in object.images.all %}
+                        <div class="col-md-3 mb-3" id="image-container-{{ image.id }}">
+                            <div class="card">
+                                <img src="{{ image.image.url }}" class="card-img-top" alt="Time Entry Image">
+                                <div class="card-body p-2 text-center">
+                                    <button type="button" class="btn btn-danger btn-sm delete-image-btn" data-image-id="{{ image.id }}">Delete</button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <hr>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label for="id_images" class="form-label">Upload New Images</label>
+                        <input type="file" name="images" class="form-control" multiple id="id_images">
+                    </div>
+
+                    <div class="d-flex justify-content-end">
+                        <a href="{% url 'tracker:entry_list' %}" class="btn btn-secondary me-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Time details edit toggle
+    const editTimeBtn = document.getElementById('edit-time-btn');
+    if (editTimeBtn) {
+        editTimeBtn.addEventListener('click', function() {
+            document.getElementById('time-details-display').classList.add('d-none');
+            document.getElementById('time-details-edit').classList.remove('d-none');
+            document.getElementById('time_details_edited_flag').value = 'true';
+        });
+    }
+
+    // Image deletion
+    const imageContainer = document.getElementById('existing-images-container');
+    if (imageContainer) {
+        imageContainer.addEventListener('click', function(event) {
+            if (event.target.classList.contains('delete-image-btn')) {
+                const imageId = event.target.dataset.imageId;
+                if (confirm('Are you sure you want to delete this image?')) {
+                    fetch(`/ajax/delete-image/${imageId}/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}',
+                            'Content-Type': 'application/json'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            document.getElementById(`image-container-${imageId}`).remove();
+                        } else {
+                            alert('Error deleting image: ' + data.error);
+                        }
+                    });
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

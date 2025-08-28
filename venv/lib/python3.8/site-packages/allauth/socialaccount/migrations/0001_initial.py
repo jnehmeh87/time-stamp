@@ -1,11 +1,7 @@
-# -*- coding: utf-8 -*-
-from __future__ import unicode_literals
-
 from django.conf import settings
 from django.db import migrations, models
 
 from allauth import app_settings
-from allauth.socialaccount.providers import registry
 
 
 class Migration(migrations.Migration):
@@ -37,7 +33,6 @@ class Migration(migrations.Migration):
                     models.CharField(
                         max_length=30,
                         verbose_name="provider",
-                        choices=registry.as_choices(),
                     ),
                 ),
                 (
@@ -91,7 +86,6 @@ class Migration(migrations.Migration):
                     models.CharField(
                         max_length=30,
                         verbose_name="provider",
-                        choices=registry.as_choices(),
                     ),
                 ),
                 ("name", models.CharField(max_length=40, verbose_name="name")),
