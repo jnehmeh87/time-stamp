@@ -1,63 +1,12 @@
+{% load static %}
 <!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
     <title>{{ trans.t_translated_report }}</title>
-    <style>
-        @font-face {
-            font-family: "DejaVuSans";
-            src: url("/static/fonts/DejaVuSans.ttf") format("truetype");
-            /* You must provide a valid path to a font that supports the target language characters */
-        }
-        body {
-            font-family: "DejaVuSans", sans-serif;
-            font-size: 10px;
-        }
-        small {
-            font-size: 10px; /* Increase size of small text for readability */
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-            word-wrap: break-word;
-        }
-        th {
-            border: 1px solid #ddd;
-            padding: 4px 8px 2px 8px; /* Reduced bottom padding */
-            text-align: left;
-            word-wrap: break-word;
-            background-color: #f2f2f2;
-        }
-        .time-col {
-            width: 15%;
-            white-space: nowrap;
-        }
-        .duration-col {
-            width: 10%;
-            white-space: nowrap;
-        }
-        .center-col {
-            text-align: center;
-        }
-        {% if is_rtl %}
-        body {
-            direction: rtl;
-        }
-        th, td {
-            text-align: right;
-        }
-        .center-col {
-            text-align: center; /* Keep centered columns centered */
-        }
-        {% endif %}
-    </style>
+    <link rel="stylesheet" href="{% static 'css/report_pdf.css' %}">
 </head>
-<body>
+<body class="{% if is_rtl %}rtl{% endif %}">
     <h1>{{ trans.t_translated_report }}</h1>
     <p><strong>{{ trans.t_project }}:</strong> {{ project.name|default:trans.t_all_projects }}</p>
     <p><strong>{{ trans.t_date_range }}:</strong> {{ start_date }} to {{ end_date }}</p>

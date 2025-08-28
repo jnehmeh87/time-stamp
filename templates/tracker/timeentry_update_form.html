@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
+{% load static %}
+{% load tracker_tags %}
 
 {% block title %}Edit Time Entry{% endblock %}
 
@@ -28,9 +30,11 @@
                     <div id="time-details-display">
                         <h5>Time Details</h5>
                         <p>
-                            <strong>Start:</strong> {{ object.start_time|date:"Y-m-d H:i:s" }}<br>
-                            <strong>End:</strong> {{ object.end_time|date:"Y-m-d H:i:s" }}<br>
-                            <strong>Pause:</strong> {{ object.paused_duration }}
+                            <strong>Date:</strong> {{ object.start_time|date:"M j, Y" }}<br>
+                            <strong>Start Time:</strong> {{ object.start_time|date:"g:i:s A" }}<br>
+                            <strong>End Time:</strong> {{ object.end_time|date:"g:i:s A" }}<br>
+                            <strong>Duration:</strong> {{ object.duration|human_duration }}<br>
+                            <strong>Pause:</strong> {{ object.paused_duration|human_duration }}
                         </p>
                         <button type="button" id="edit-time-btn" class="btn btn-secondary btn-sm mb-3">Edit Time Details</button>
                     </div>
@@ -88,44 +92,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Time details edit toggle
-    const editTimeBtn = document.getElementById('edit-time-btn');
-    if (editTimeBtn) {
-        editTimeBtn.addEventListener('click', function() {
-            document.getElementById('time-details-display').classList.add('d-none');
-            document.getElementById('time-details-edit').classList.remove('d-none');
-            document.getElementById('time_details_edited_flag').value = 'true';
-        });
-    }
-
-    // Image deletion
-    const imageContainer = document.getElementById('existing-images-container');
-    if (imageContainer) {
-        imageContainer.addEventListener('click', function(event) {
-            if (event.target.classList.contains('delete-image-btn')) {
-                const imageId = event.target.dataset.imageId;
-                if (confirm('Are you sure you want to delete this image?')) {
-                    fetch(`/ajax/delete-image/${imageId}/`, {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRFToken': '{{ csrf_token }}',
-                            'Content-Type': 'application/json'
-                        }
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            document.getElementById(`image-container-${imageId}`).remove();
-                        } else {
-                            alert('Error deleting image: ' + data.error);
-                        }
-                    });
-                }
-            }
-        });
-    }
-});
-</script>
+<script src="{% static 'js/timeentry_update_form.js' %}"></script>
 {% endblock %}

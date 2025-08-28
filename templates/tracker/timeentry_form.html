@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
+{% load static %}
 
 {% block title %}{% if object %}Edit Time Entry{% else %}New Manual Entry{% endif %}{% endblock %}
 
@@ -32,8 +33,9 @@
                     <div id="time-details-display">
                         <h5>Time Details</h5>
                         <p>
-                            <strong>Start:</strong> {{ object.start_time|date:"Y-m-d H:i:s" }}<br>
-                            <strong>End:</strong> {{ object.end_time|date:"Y-m-d H:i:s" }}<br>
+                            <strong>Date:</strong> {{ object.start_time|date:"M j, Y" }}<br>
+                            <strong>Start Time:</strong> {{ object.start_time|date:"g:i A" }}<br>
+                            <strong>End Time:</strong> {{ object.end_time|date:"g:i A" }}<br>
                             <strong>Pause:</strong> {{ object.paused_duration }}
                         </p>
                         <button type="button" id="edit-time-btn" class="btn btn-secondary btn-sm mb-3">Edit Time Details</button>
@@ -90,28 +92,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const editTimeBtn = document.getElementById('edit-time-btn');
-    const timeDisplay = document.getElementById('time-details-display');
-    const timeEdit = document.getElementById('time-details-edit');
-    const timeEditedFlag = document.getElementById('time_details_edited_flag');
-
-    // For new entries (where the edit button doesn't exist), the edit section is visible by default.
-    // We must set the flag to true so the view knows it's a manual time entry.
-    if (!editTimeBtn) {
-        if (timeEditedFlag) {
-            timeEditedFlag.value = 'true';
-        }
-        return;
-    }
-
-    // For existing entries, clicking the button reveals the fields and sets the flag.
-    editTimeBtn.addEventListener('click', function() {
-        timeDisplay.classList.add('d-none');
-        timeEdit.classList.remove('d-none');
-        timeEditedFlag.value = 'true';
-    });
-});
-</script>
+<script src="{% static 'js/timeentry_form.js' %}"></script>
 {% endblock %}

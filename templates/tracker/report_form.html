@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load tracker_tags %}
+{% load static %}
 
 {% block title %}Generate Report{% endblock %}
 
@@ -134,36 +135,13 @@
 
 {% block extra_js %}
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const categorySelect = document.getElementById('id_category');
-    const projectSelect = document.getElementById('id_project');
-    const startDateInput = document.getElementById('id_start_date');
-    const endDateInput = document.getElementById('id_end_date');
-    const reportForm = document.getElementById('reportForm');
-
-    if (categorySelect) {
-        categorySelect.addEventListener('change', function() {
-            // Clear project selection and submit the form to reload the project dropdown
-            projectSelect.value = '';
-            reportForm.submit();
-        });
-    }
-
-    if (projectSelect) {
-        projectSelect.addEventListener('change', function() {
-            const projectId = this.value;
-            if (projectId) {
-                fetch(`{% url 'tracker:ajax_get_project_dates' %}?project_id=${projectId}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            startDateInput.value = data.start_date;
-                            endDateInput.value = data.end_date;
-                        }
-                    });
-            }
-        });
-    }
-});
+    // Pass the Django URL to the project select element for the external JS to use.
+    document.addEventListener('DOMContentLoaded', function() {
+        const projectSelect = document.getElementById('id_project');
+        if (projectSelect) {
+            projectSelect.dataset.projectDatesUrl = "{% url 'tracker:ajax_get_project_dates' %}";
+        }
+    });
 </script>
+<script src="{% static 'js/report_form.js' %}"></script>
 {% endblock %}
