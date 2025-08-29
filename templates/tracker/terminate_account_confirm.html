@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Confirm Account Termination{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h3>Confirm Account Termination</h3>
+                </div>
+                <div class="card-body">
+                    <p>Are you absolutely sure you want to terminate your account? This action is irreversible. All of your data will be permanently deleted.</p>
+                    <form method="post">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger">Yes, Terminate My Account</button>
+                        <a href="{% url 'tracker:profile' %}" class="btn btn-secondary">Cancel</a>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

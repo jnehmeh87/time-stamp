@@ -1,9 +1,10 @@
 from django.db import models
 from django.conf import settings
-from django.contrib.auth.models import User
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django_countries.fields import CountryField
+from django.utils import timezone
+from django.contrib.auth.models import User
 from datetime import timedelta
 
 CATEGORY_CHOICES = [
@@ -12,21 +13,23 @@ CATEGORY_CHOICES = [
 ]
 
 class Profile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-    country = CountryField(blank_label='(select country)', null=True, blank=True)
-    address = models.CharField(max_length=255, blank=True, null=True)
-    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    country = CountryField(blank=True, null=True)
+    address = models.CharField(max_length=255, blank=True)
+    phone_number = models.CharField(max_length=20, blank=True)
 
     def __str__(self):
         return f'{self.user.username} Profile'
 
-@receiver(post_save, sender=User)
-def create_or_update_user_profile(sender, instance, **kwargs):
+@receiver(post_save, sender=settings.AUTH_USER_MODEL)
+def create_or_update_user_profile(sender, instance, created, **kwargs):
     """
-    Ensure a profile exists for every user.
-    Uses get_or_create to be robust against users created before the profile model.
+    Create a profile for new users, or save the profile for existing users.
     """
-    Profile.objects.get_or_create(user=instance)
+    if created:
+        Profile.objects.create(user=instance)
+    # Ensure the profile is saved when the user is saved.
+    instance.profile.save()
 
 
 class Project(models.Model):

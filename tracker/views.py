@@ -9,8 +9,9 @@ from django.utils import timezone
 from django.urls import reverse_lazy, reverse
 from urllib.parse import urlencode
 from .models import TimeEntry, Project, TimeEntryImage
-from .forms import TimeEntryForm, ProjectForm, TimeEntryFilterForm, ReportForm, TimeEntryUpdateForm
+from .forms import TimeEntryForm, ProjectForm, TimeEntryFilterForm, ReportForm, TimeEntryUpdateForm, UserUpdateForm, ProfileUpdateForm
 from django.contrib import messages
+from django.contrib.auth import logout
 from django.db.models import Sum, F, ExpressionWrapper, DurationField, Min, Max, Count, Q
 from django.db.models.functions import TruncDay
 from django.http import JsonResponse
@@ -1183,3 +1184,33 @@ def analytics_view(request):
     return render(request, 'tracker/analytics.html', context)
     context = get_analytics_data(request.user, period, category)
     return render(request, 'tracker/analytics.html', context)
+
+@login_required
+def profile_view(request):
+    if request.method == 'POST':
+        user_form = UserUpdateForm(request.POST, instance=request.user)
+        profile_form = ProfileUpdateForm(request.POST, instance=request.user.profile)
+        if user_form.is_valid() and profile_form.is_valid():
+            user_form.save()
+            profile_form.save()
+            messages.success(request, 'Your profile has been updated successfully!')
+            return redirect('tracker:profile')
+    else:
+        user_form = UserUpdateForm(instance=request.user)
+        profile_form = ProfileUpdateForm(instance=request.user.profile)
+
+    context = {
+        'user_form': user_form,
+        'profile_form': profile_form
+    }
+    return render(request, 'tracker/profile.html', context)
+
+@login_required
+def terminate_account_confirm(request):
+    if request.method == 'POST':
+        user = request.user
+        logout(request)
+        user.delete()
+        messages.success(request, 'Your account has been successfully terminated.')
+        return redirect('tracker:entry_list')
+    return render(request, 'tracker/terminate_account_confirm.html')

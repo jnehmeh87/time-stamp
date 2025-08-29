@@ -38,6 +38,8 @@ INSTALLED_APPS = [
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.apple',
     'widget_tweaks',
     'django_countries',
     'crispy_forms',
@@ -153,6 +155,49 @@ ACCOUNT_LOGIN_METHODS = ['username', 'email']
 ACCOUNT_EMAIL_VERIFICATION = 'optional' # Can be 'mandatory' in production
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
+
+# Session duration settings
+# Default session expires after 1 day (in seconds)
+SESSION_COOKIE_AGE = 86400  # 24 * 60 * 60
+# When "Remember Me" is checked, session lasts for 1 year
+ACCOUNT_SESSION_COOKIE_AGE = 31536000  # 365 * 24 * 60 * 60
+# Ensure the "Remember Me" checkbox is displayed
+ACCOUNT_SESSION_REMEMBER = None
+SOCIALACCOUNT_ADAPTER = 'tracker.adapters.CustomSocialAccountAdapter'
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        # For each OAuth based provider, either add a ``SocialApp``
+        # (``socialaccount`` app) containing the required client
+        # credentials, or list them here:
+        'APP': {
+            'client_id': os.environ.get('GOOGLE_CLIENT_ID'),
+            'secret': os.environ.get('GOOGLE_SECRET_SECRET'),
+            'key': ''
+        },
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        }
+    },
+    'apple': {
+        'APP': {
+            # Your service id.
+            'client_id': os.environ.get('APPLE_CLIENT_ID'),
+            # The Key ID of the private key used to sign the client secret.
+            'secret': os.environ.get('APPLE_KEY_ID'),
+            # The private key found in your Apple developer account.
+            'key': os.environ.get('APPLE_PRIVATE_KEY'),
+            'certificate_key': os.environ.get('APPLE_PRIVATE_KEY'),
+        },
+        'TEAM': os.environ.get('APPLE_TEAM_ID'),
+        'SCOPE': ['name', 'email'],
+        'EMAIL_AUTHENTICATION': True,
+    }
+}
 
 ACCOUNT_FORMS = {
     'signup': 'tracker.forms.CustomSignupForm',

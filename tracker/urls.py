@@ -48,4 +48,8 @@ urlpatterns = [
     # AJAX
     path('ajax/get-projects/', views.get_projects_for_category, name='ajax_get_projects'),
     path('ajax/get-project-dates/', views.get_project_dates, name='ajax_get_project_dates'),
+
+    # Profile
+    path('profile/', views.profile_view, name='profile'),
+    path('profile/terminate/', views.terminate_account_confirm, name='terminate_account_confirm'),
 ]

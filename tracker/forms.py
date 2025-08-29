@@ -1,9 +1,12 @@
 from django import forms
-from .models import TimeEntry, Project, TimeEntryImage, CATEGORY_CHOICES
+from .models import TimeEntry, Project, TimeEntryImage, CATEGORY_CHOICES, Profile
 from django.core.exceptions import ValidationError
 from datetime import date, timedelta
 from allauth.account.forms import SignupForm
 from django_countries.fields import CountryField
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 class MultiImageInput(forms.ClearableFileInput):
     allow_multiple_selected = True
@@ -131,12 +134,32 @@ class ReportForm(forms.Form):
             
         self.fields['project'].queryset = projects
 
+class UserUpdateForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ('first_name', 'last_name', 'email')
+        widgets = {
+            'first_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+        }
+
+class ProfileUpdateForm(forms.ModelForm):
+    class Meta:
+        model = Profile
+        fields = ('country', 'address', 'phone_number')
+        widgets = {
+            'country': forms.Select(attrs={'class': 'form-select'}),
+            'address': forms.TextInput(attrs={'class': 'form-control'}),
+            'phone_number': forms.TextInput(attrs={'class': 'form-control', 'id': 'id_phone_number'}),
+        }
+
 class CustomSignupForm(SignupForm):
     first_name = forms.CharField(max_length=30, label='First Name', widget=forms.TextInput(attrs={'placeholder': 'First Name'}))
     last_name = forms.CharField(max_length=30, label='Last Name', widget=forms.TextInput(attrs={'placeholder': 'Last Name'}))
-    country = CountryField(blank_label='(select country)').formfield()
-    address = forms.CharField(max_length=255, label='Address', widget=forms.TextInput(attrs={'placeholder': 'Your address'}))
-    phone_number = forms.CharField(max_length=20, label='Phone Number', widget=forms.TextInput(attrs={'placeholder': 'Your phone number'}))
+    country = CountryField(blank_label='(select country)').formfield(required=False)
+    address = forms.CharField(max_length=255, label='Address', widget=forms.TextInput(attrs={'placeholder': 'Your address'}), required=False)
+    phone_number = forms.CharField(max_length=20, label='Phone Number', widget=forms.TextInput(attrs={'placeholder': 'Your phone number'}), required=False)
 
     def save(self, request):
         user = super(CustomSignupForm, self).save(request)
