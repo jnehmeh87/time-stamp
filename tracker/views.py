@@ -11,7 +11,7 @@ from urllib.parse import urlencode
 from .models import TimeEntry, Project, TimeEntryImage
 from .forms import TimeEntryForm, ProjectForm, TimeEntryFilterForm, ReportForm, TimeEntryUpdateForm
 from django.contrib import messages
-from django.db.models import Sum, F, ExpressionWrapper, DurationField, Min, Max, Count
+from django.db.models import Sum, F, ExpressionWrapper, DurationField, Min, Max, Count, Q
 from django.db.models.functions import TruncDay
 from django.http import JsonResponse
 from datetime import timedelta, date, datetime, time
@@ -161,7 +161,11 @@ class TimeEntryListView(LoginRequiredMixin, ListView):
 
             end_date = self.form.cleaned_data.get('end_date')
             if end_date:
-                queryset = queryset.filter(end_time__date__lte=end_date)
+                # Include entries that end on or before the end_date,
+                # OR entries that are still running (end_time is NULL).
+                queryset = queryset.filter(
+                    Q(end_time__date__lte=end_date) | Q(end_time__isnull=True)
+                )
 
             category = self.form.cleaned_data.get('category')
             if category:
@@ -180,20 +184,30 @@ class TimeEntryListView(LoginRequiredMixin, ListView):
             queryset = queryset.filter(is_archived=False)
 
         # Sorting logic
-        sort_by = self.request.GET.get('sort_by', 'start_time') # Default sort
-        sort_dir = self.request.GET.get('sort_dir', 'desc')
-        
-        valid_sort_fields = ['title', 'project__name', 'start_time', 'end_time', 'duration', 'category', 'paused_duration']
-        
-        # Map the 'duration' sort field to our calculated field
-        sort_field_db = 'duration_calc' if sort_by == 'duration' else sort_by
+        sort_by = self.request.GET.get('sort_by')
+        sort_dir = self.request.GET.get('sort_dir')
 
-        if sort_by in valid_sort_fields:
+        # Map user-friendly sort fields to database fields
+        sort_field_mapping = {
+            'task': 'title',
+            'project': 'project__name',
+            'date': 'start_time',
+            'start_time': 'start_time',
+            'duration': 'duration_calc', # Use the annotated field
+            'paused_time': 'paused_duration',
+            'category': 'category',
+        }
+        
+        sort_field_db = sort_field_mapping.get(sort_by)
+
+        if sort_field_db and sort_dir in ['asc', 'desc']:
+            # Apply user-specified sort
             if sort_dir == 'desc':
                 sort_field_db = f'-{sort_field_db}'
-            queryset = queryset.order_by(sort_field_db)
+            queryset = queryset.order_by(sort_field_db, '-pk')
         else:
-            queryset = queryset.order_by('-start_time')
+            # Apply default sort (newest first)
+            queryset = queryset.order_by('-start_time', '-pk')
 
 
         return queryset
@@ -204,8 +218,8 @@ class TimeEntryListView(LoginRequiredMixin, ListView):
         # Pass the form to the template
         context['form'] = self.form
 
-        # Pass sorting info to template
-        context['sort_by'] = self.request.GET.get('sort_by', 'start_time')
+                # Pass sorting info to template
+        context['sort_by'] = self.request.GET.get('sort_by', 'date')
         context['sort_dir'] = self.request.GET.get('sort_dir', 'desc')
 
         # Data for dynamic project dropdown
@@ -480,8 +494,9 @@ def get_time_entry_details(request, pk):
             'title': entry.title,
             'project': entry.project.name if entry.project else 'No Project',
             'category': entry.get_category_display(),
-            'start_time': entry.start_time.strftime('%Y-%m-%d %H:%M:%S'),
-            'end_time': entry.end_time.strftime('%Y-%m-%d %H:%M:%S') if entry.end_time else 'In Progress',
+            'date': entry.start_time.strftime('%b %-d, %Y'),
+            'start_time': entry.start_time.strftime('%-I:%M:%S %p'),
+            'end_time': entry.end_time.strftime('%-I:%M:%S %p') if entry.end_time else 'In Progress',
             'duration': formatted_duration,
             'paused_duration': formatted_paused_duration,
             'description': entry.description or 'No description provided.',
