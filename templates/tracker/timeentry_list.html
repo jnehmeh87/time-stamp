@@ -135,30 +135,33 @@
     <input type="hidden" name="preserved_filters" value="{{ request.GET.urlencode }}">
     <div class="card mb-3">
         <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-2 gap-2">
+            <div class="d-flex justify-content-center justify-content-sm-end align-items-center mb-2 gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    {% if form.show_archived.value %}
+                    <button type="submit" class="btn btn-sm btn-secondary archive-action-btn px-1 px-sm-2" id="bulk-unarchive-btn" disabled formaction="{% url 'tracker:entry_bulk_unarchive_confirm' %}"><i class="fas fa-box-open me-1"></i>Unarchive</button>
+                    {% else %}
+                    <button type="submit" class="btn btn-sm btn-warning archive-action-btn px-1 px-sm-2" id="bulk-archive-btn" disabled formaction="{% url 'tracker:entry_bulk_archive_confirm' %}"><i class="fas fa-archive me-1"></i>Archive</button>
+                    {% endif %}
+                    <button type="submit" class="btn btn-sm btn-danger px-1 px-sm-2" id="bulk-delete-btn" disabled formaction="{% url 'tracker:entry_bulk_delete_confirm' %}"><i class="fas fa-trash-alt me-1"></i>Delete</button>
+                    <a href="{% url 'tracker:entry_create' %}" class="btn btn-sm btn-primary px-1 px-sm-2">
+                        <i class="fas fa-plus me-1"></i> New Entry
+                    </a>
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between align-items-center">
                 <div class="form-check">
                     <input class="form-check-input" type="checkbox" id="select-all-entries">
                     <label class="form-check-label" for="select-all-entries">
                         Select all
                     </label>
                 </div>
-                <div class="d-flex align-items-center gap-2">
-                    <small class="text-muted fst-italic me-2 d-none d-sm-inline">
-                        <span title="Time was edited"><i class="fas fa-pen"></i> = Edited</span>
-                        <span class="ms-2" title="Manually created"><i class="fas fa-plus-circle"></i> = Manual</span>
-                    </small>
-                    {% if form.show_archived.value %}
-                    <button type="submit" class="btn btn-secondary archive-action-btn" id="bulk-unarchive-btn" disabled formaction="{% url 'tracker:entry_bulk_unarchive_confirm' %}">Unarchive</button>
-                    {% else %}
-                    <button type="submit" class="btn btn-warning archive-action-btn" id="bulk-archive-btn" disabled formaction="{% url 'tracker:entry_bulk_archive_confirm' %}">Archive</button>
-                    {% endif %}
-                    <button type="submit" class="btn btn-danger" id="bulk-delete-btn" disabled formaction="{% url 'tracker:entry_bulk_delete_confirm' %}">Delete</button>
-                    <a href="{% url 'tracker:entry_create' %}" class="btn btn-primary">
-                        <i class="fas fa-plus me-1"></i> New Manual Entry
-                    </a>
-                </div>
+                <small class="text-body-tertiary fst-italic">
+                    <span title="Time was edited"><i class="fas fa-pen"></i> = Edited</span>
+                    <span class="ms-2" title="Manually created"><i class="fas fa-plus-circle"></i> = Manual</span>
+                </small>
             </div>
-            
+            <hr>
             <!-- Table View Container -->
             <div id="table-view-container">
                 <div class="table-responsive">
