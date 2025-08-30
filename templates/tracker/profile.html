@@ -1,159 +1,97 @@
-{% extends "base.html" %} {% load crispy_forms_tags %} {% load static %} {%
-block title %}My Profile{% endblock %} {% block extra_css %}
-<link
-  rel="stylesheet"
-  href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/css/intlTelInput.css"
-/>
-<link rel="stylesheet" href="{% static 'css/profile.css' %}" />
-{% endblock %} {% block content %}
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+{% load static %}
+
+{% block title %}My Profile{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/css/intlTelInput.css"/>
+<link rel="stylesheet" href="{% static 'css/profile.css' %}">
+{% endblock %}
+
+{% block content %}
 <div class="container mt-4">
-  <div class="row">
-    <div class="col-md-3">
-      <div
-        class="nav flex-column nav-pills"
-        id="v-pills-tab"
-        role="tablist"
-        aria-orientation="vertical"
-      >
-        <button
-          class="nav-link active text-start"
-          id="v-pills-profile-tab"
-          data-bs-toggle="pill"
-          data-bs-target="#v-pills-profile"
-          type="button"
-          role="tab"
-          aria-controls="v-pills-profile"
-          aria-selected="true"
-        >
-          <i class="fas fa-user-circle me-2"></i>Profile Details
-        </button>
-        <button
-          class="nav-link text-start"
-          id="v-pills-account-tab"
-          data-bs-toggle="pill"
-          data-bs-target="#v-pills-account"
-          type="button"
-          role="tab"
-          aria-controls="v-pills-account"
-          aria-selected="false"
-        >
-          <i class="fas fa-cog me-2"></i>Account Settings
-        </button>
-        <button
-          class="nav-link text-start disabled"
-          id="v-pills-billing-tab"
-          type="button"
-        >
-          <i class="fas fa-wallet me-2"></i>Billing (Coming Soon)
-        </button>
-      </div>
-    </div>
-    <div class="col-md-9">
-      <div class="tab-content" id="v-pills-tabContent">
-        <!-- Profile Details Tab -->
-        <div
-          class="tab-pane fade show active"
-          id="v-pills-profile"
-          role="tabpanel"
-          aria-labelledby="v-pills-profile-tab"
-        >
-          <div class="card">
-            <div
-              class="card-header d-flex justify-content-between align-items-center"
-            >
-              <h4>Profile Information</h4>
-              <button
-                id="edit-profile-btn"
-                class="btn btn-outline-primary btn-sm"
-              >
-                <i class="fas fa-pencil-alt me-1"></i> Edit
-              </button>
+    <div class="row">
+        <div class="col-md-3">
+            <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
+                <button class="nav-link active text-start" id="v-pills-profile-tab" data-bs-toggle="pill" data-bs-target="#v-pills-profile" type="button" role="tab" aria-controls="v-pills-profile" aria-selected="true">
+                    <i class="fas fa-user-circle me-2"></i>Profile Details
+                </button>
+                <button class="nav-link text-start" id="v-pills-account-tab" data-bs-toggle="pill" data-bs-target="#v-pills-account" type="button" role="tab" aria-controls="v-pills-account" aria-selected="false">
+                    <i class="fas fa-cog me-2"></i>Account Settings
+                </button>
+                <button class="nav-link text-start disabled" id="v-pills-billing-tab" type="button">
+                    <i class="fas fa-wallet me-2"></i>Billing (Coming Soon)
+                </button>
             </div>
-            <div class="card-body">
-              <!-- View Mode -->
-              <div id="profile-view-mode">
-                <dl class="row">
-                  <dt class="col-sm-3">First Name</dt>
-                  <dd class="col-sm-9">
-                    {{ user_form.instance.first_name|default:"-" }}
-                  </dd>
-                  <dt class="col-sm-3">Last Name</dt>
-                  <dd class="col-sm-9">
-                    {{ user_form.instance.last_name|default:"-" }}
-                  </dd>
-                  <dt class="col-sm-3">Email</dt>
-                  <dd class="col-sm-9">
-                    {{ user_form.instance.email|default:"-" }}
-                  </dd>
-                  <hr class="my-3" />
-                  <dt class="col-sm-3">Country</dt>
-                  <dd class="col-sm-9">
-                    {{ profile_form.instance.country.name|default:"-" }}
-                  </dd>
-                  <dt class="col-sm-3">Address</dt>
-                  <dd class="col-sm-9">
-                    {{ profile_form.instance.address|default:"-" }}
-                  </dd>
-                  <dt class="col-sm-3">Phone Number</dt>
-                  <dd class="col-sm-9">
-                    {{ profile_form.instance.phone_number|default:"-" }}
-                  </dd>
-                </dl>
-              </div>
-              <!-- Edit Mode (Initially Hidden) -->
-              <form id="profile-edit-mode" method="post" class="d-none">
-                {% csrf_token %}
-                <fieldset class="form-group">{{ user_form|crispy }}</fieldset>
-                <fieldset class="form-group mt-3">
-                  {{ profile_form|crispy }}
-                </fieldset>
-                <div class="form-group mt-4">
-                  <button class="btn btn-primary" type="submit">
-                    Save Changes
-                  </button>
-                  <button
-                    id="cancel-edit-btn"
-                    class="btn btn-secondary"
-                    type="button"
-                  >
-                    Cancel
-                  </button>
+        </div>
+        <div class="col-md-9">
+            <div class="tab-content" id="v-pills-tabContent">
+                <!-- Profile Details Tab -->
+                <div class="tab-pane fade show active" id="v-pills-profile" role="tabpanel" aria-labelledby="v-pills-profile-tab">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h4>Profile Information</h4>
+                            <button id="edit-profile-btn" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-pencil-alt me-1"></i> Edit
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <!-- View Mode -->
+                            <div id="profile-view-mode">
+                                <dl class="row">
+                                    <dt class="col-sm-3">First Name</dt>
+                                    <dd class="col-sm-9">{{ user_form.instance.first_name|default:"-" }}</dd>
+                                    <dt class="col-sm-3">Last Name</dt>
+                                    <dd class="col-sm-9">{{ user_form.instance.last_name|default:"-" }}</dd>
+                                    <dt class="col-sm-3">Email</dt>
+                                    <dd class="col-sm-9">{{ user_form.instance.email|default:"-" }}</dd>
+                                    <hr class="my-3">
+                                    <dt class="col-sm-3">Country</dt>
+                                    <dd class="col-sm-9">{{ profile_form.instance.country.name|default:"-" }}</dd>
+                                    <dt class="col-sm-3">Address</dt>
+                                    <dd class="col-sm-9">{{ profile_form.instance.address|default:"-" }}</dd>
+                                    <dt class="col-sm-3">Phone Number</dt>
+                                    <dd class="col-sm-9">{{ profile_form.instance.phone_number|default:"-" }}</dd>
+                                </dl>
+                            </div>
+                            <!-- Edit Mode (Initially Hidden) -->
+                            <form id="profile-edit-mode" method="post" class="d-none">
+                                {% csrf_token %}
+                                <fieldset class="form-group">
+                                    {{ user_form|crispy }}
+                                </fieldset>
+                                <fieldset class="form-group mt-3">
+                                    {{ profile_form|crispy }}
+                                </fieldset>
+                                <div class="form-group mt-4">
+                                    <button class="btn btn-primary" type="submit">Save Changes</button>
+                                    <button id="cancel-edit-btn" class="btn btn-secondary" type="button">Cancel</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
                 </div>
-              </form>
+                <!-- Account Settings Tab -->
+                <div class="tab-pane fade" id="v-pills-account" role="tabpanel" aria-labelledby="v-pills-account-tab">
+                    <div class="card border-danger">
+                        <div class="card-header bg-danger text-white">
+                            <h4>Danger Zone</h4>
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title">Terminate Account</h5>
+                            <p>Terminating your account is a permanent action and cannot be undone. All your data, including time entries and projects, will be permanently deleted.</p>
+                            <a href="{% url 'tracker:terminate_account_confirm' %}" class="btn btn-danger">Terminate My Account</a>
+                        </div>
+                    </div>
+                </div>
             </div>
-          </div>
         </div>
-        <!-- Account Settings Tab -->
-        <div
-          class="tab-pane fade"
-          id="v-pills-account"
-          role="tabpanel"
-          aria-labelledby="v-pills-account-tab"
-        >
-          <div class="card border-danger">
-            <div class="card-header bg-danger text-white">
-              <h4>Danger Zone</h4>
-            </div>
-            <div class="card-body">
-              <h5 class="card-title">Terminate Account</h5>
-              <p>
-                Terminating your account is a permanent action and cannot be
-                undone. All your data, including time entries and projects, will
-                be permanently deleted.
-              </p>
-              <a
-                href="{% url 'tracker:terminate_account_confirm' %}"
-                class="btn btn-danger"
-                >Terminate My Account</a
-              >
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
-  </div>
 </div>
-{% endblock %} {% block extra_js %}
+{% endblock %}
+
+{% block extra_js %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/intlTelInput.min.js"></script>
 <script src="{% static 'js/profile.js' %}"></script>
 {% endblock %}

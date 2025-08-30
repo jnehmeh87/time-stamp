@@ -1,282 +1,157 @@
-{% extends "base.html" %} {% block title %}My Projects{% endblock %} {% block
-content %}
+{% extends "base.html" %}
+
+{% block title %}My Projects{% endblock %}
+
+{% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-  <h1>My Projects</h1>
-  <div class="d-flex align-items-center gap-2">
-    <form method="get" class="form-check form-switch">
-      <input
-        class="form-check-input"
-        type="checkbox"
-        role="switch"
-        id="showArchived"
-        name="show_archived"
-        {%
-        if
-        show_archived
-        %}checked{%
-        endif
-        %}
-        onchange="this.form.submit()"
-      />
-      <label class="form-check-label" for="showArchived">Show Archived</label>
-    </form>
-    <a href="{% url 'tracker:project_create' %}" class="btn btn-outline-primary"
-      >Add Project</a
-    >
-  </div>
+    <h1>My Projects</h1>
+    <div class="d-flex align-items-center gap-2">
+        <form method="get" class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" id="showArchived" name="show_archived" {% if show_archived %}checked{% endif %} onchange="this.form.submit()">
+            <label class="form-check-label" for="showArchived">Show Archived</label>
+        </form>
+        <a href="{% url 'tracker:project_create' %}" class="btn btn-outline-primary">Add Project</a>
+    </div>
 </div>
 
 <!-- Mobile/Tablet Tab View -->
 <div class="d-md-none">
-  <ul class="nav nav-tabs nav-fill mb-3" id="projectTabs" role="tablist">
-    <li class="nav-item" role="presentation">
-      <button
-        class="nav-link active"
-        id="work-tab-mobile"
-        data-bs-toggle="tab"
-        data-bs-target="#work-projects-pane"
-        type="button"
-        role="tab"
-        aria-controls="work-projects-pane"
-        aria-selected="true"
-      >
-        Work
-      </button>
-    </li>
-    <li class="nav-item" role="presentation">
-      <button
-        class="nav-link"
-        id="personal-tab-mobile"
-        data-bs-toggle="tab"
-        data-bs-target="#personal-projects-pane"
-        type="button"
-        role="tab"
-        aria-controls="personal-projects-pane"
-        aria-selected="false"
-      >
-        Personal
-      </button>
-    </li>
-  </ul>
-  <div class="tab-content" id="projectTabsContent">
-    <div
-      class="tab-pane fade show active"
-      id="work-projects-pane"
-      role="tabpanel"
-      aria-labelledby="work-tab-mobile"
-      tabindex="0"
-    >
-      {% if work_projects %}
-      <ul class="list-group list-group-flush">
-        {% for project in work_projects %}
-        <li
-          class="list-group-item {% if project.is_archived %}bg-warning bg-opacity-25{% endif %}"
-        >
-          <div class="d-flex justify-content-between align-items-center">
-            <div class="flex-grow-1">
-              <h5 class="mb-1">{{ project.name }}</h5>
-              <p class="mb-1 text-muted">
-                {{ project.description|truncatewords:20 }}
-              </p>
-            </div>
-            <div class="d-flex align-items-center gap-1 ms-2">
-              <a
-                href="{% url 'tracker:project_update' project.pk %}"
-                class="btn btn-sm btn-outline-secondary"
-                >Edit</a
-              >
-              {% if project.is_archived %}
-              <a
-                href="{% url 'tracker:project_unarchive_confirm' project.pk %}"
-                class="btn btn-sm btn-outline-success"
-                >Unarchive</a
-              >
-              {% else %}
-              <a
-                href="{% url 'tracker:project_archive_confirm' project.pk %}"
-                class="btn btn-sm btn-outline-warning"
-                >Archive</a
-              >
-              {% endif %}
-              <a
-                href="{% url 'tracker:project_delete' project.pk %}"
-                class="btn btn-sm btn-outline-danger"
-                >Delete</a
-              >
-            </div>
-          </div>
+    <ul class="nav nav-tabs nav-fill mb-3" id="projectTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="work-tab-mobile" data-bs-toggle="tab" data-bs-target="#work-projects-pane" type="button" role="tab" aria-controls="work-projects-pane" aria-selected="true">Work</button>
         </li>
-        {% endfor %}
-      </ul>
-      {% else %}
-      <p class="text-center text-muted">No work projects found.</p>
-      {% endif %}
-    </div>
-    <div
-      class="tab-pane fade"
-      id="personal-projects-pane"
-      role="tabpanel"
-      aria-labelledby="personal-tab-mobile"
-      tabindex="0"
-    >
-      {% if personal_projects %}
-      <ul class="list-group list-group-flush">
-        {% for project in personal_projects %}
-        <li
-          class="list-group-item {% if project.is_archived %}bg-warning bg-opacity-25{% endif %}"
-        >
-          <div class="d-flex justify-content-between align-items-center">
-            <div class="flex-grow-1">
-              <h5 class="mb-1">{{ project.name }}</h5>
-              <p class="mb-1 text-muted">
-                {{ project.description|truncatewords:20 }}
-              </p>
-            </div>
-            <div class="d-flex align-items-center gap-1 ms-2">
-              <a
-                href="{% url 'tracker:project_update' project.pk %}"
-                class="btn btn-sm btn-outline-secondary"
-                >Edit</a
-              >
-              {% if project.is_archived %}
-              <a
-                href="{% url 'tracker:project_unarchive_confirm' project.pk %}"
-                class="btn btn-sm btn-outline-success"
-                >Unarchive</a
-              >
-              {% else %}
-              <a
-                href="{% url 'tracker:project_archive_confirm' project.pk %}"
-                class="btn btn-sm btn-outline-warning"
-                >Archive</a
-              >
-              {% endif %}
-              <a
-                href="{% url 'tracker:project_delete' project.pk %}"
-                class="btn btn-sm btn-outline-danger"
-                >Delete</a
-              >
-            </div>
-          </div>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="personal-tab-mobile" data-bs-toggle="tab" data-bs-target="#personal-projects-pane" type="button" role="tab" aria-controls="personal-projects-pane" aria-selected="false">Personal</button>
         </li>
-        {% endfor %}
-      </ul>
-      {% else %}
-      <p class="text-center text-muted">No personal projects found.</p>
-      {% endif %}
+    </ul>
+    <div class="tab-content" id="projectTabsContent">
+        <div class="tab-pane fade show active" id="work-projects-pane" role="tabpanel" aria-labelledby="work-tab-mobile" tabindex="0">
+            {% if work_projects %}
+                <ul class="list-group list-group-flush">
+                    {% for project in work_projects %}
+                    <li class="list-group-item {% if project.is_archived %}bg-warning bg-opacity-25{% endif %}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="flex-grow-1">
+                                <h5 class="mb-1">{{ project.name }}</h5>
+                                <p class="mb-1 text-muted">{{ project.description|truncatewords:20 }}</p>
+                            </div>
+                            <div class="d-flex align-items-center gap-1 ms-2">
+                                <a href="{% url 'tracker:project_update' project.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                                {% if project.is_archived %}
+                                <a href="{% url 'tracker:project_unarchive_confirm' project.pk %}" class="btn btn-sm btn-outline-success">Unarchive</a>
+                                {% else %}
+                                <a href="{% url 'tracker:project_archive_confirm' project.pk %}" class="btn btn-sm btn-outline-warning">Archive</a>
+                                {% endif %}
+                                <a href="{% url 'tracker:project_delete' project.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+                            </div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-center text-muted">No work projects found.</p>
+            {% endif %}
+        </div>
+        <div class="tab-pane fade" id="personal-projects-pane" role="tabpanel" aria-labelledby="personal-tab-mobile" tabindex="0">
+            {% if personal_projects %}
+                <ul class="list-group list-group-flush">
+                    {% for project in personal_projects %}
+                    <li class="list-group-item {% if project.is_archived %}bg-warning bg-opacity-25{% endif %}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="flex-grow-1">
+                                <h5 class="mb-1">{{ project.name }}</h5>
+                                <p class="mb-1 text-muted">{{ project.description|truncatewords:20 }}</p>
+                            </div>
+                            <div class="d-flex align-items-center gap-1 ms-2">
+                                <a href="{% url 'tracker:project_update' project.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                                {% if project.is_archived %}
+                                <a href="{% url 'tracker:project_unarchive_confirm' project.pk %}" class="btn btn-sm btn-outline-success">Unarchive</a>
+                                {% else %}
+                                <a href="{% url 'tracker:project_archive_confirm' project.pk %}" class="btn btn-sm btn-outline-warning">Archive</a>
+                                {% endif %}
+                                <a href="{% url 'tracker:project_delete' project.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+                            </div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="text-center text-muted">No personal projects found.</p>
+            {% endif %}
+        </div>
     </div>
-  </div>
 </div>
+
 
 <!-- Desktop View -->
 <div class="row d-none d-md-flex">
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-header">
-        <h4>Work Projects</h4>
-      </div>
-      <div class="card-body">
-        {% if work_projects %}
-        <ul class="list-group list-group-flush">
-          {% for project in work_projects %}
-          <li
-            class="list-group-item {% if project.is_archived %}bg-warning bg-opacity-25{% endif %}"
-          >
-            <div class="d-flex justify-content-between align-items-center">
-              <div class="flex-grow-1">
-                <h5 class="mb-1">{{ project.name }}</h5>
-                <p class="mb-1 text-muted">
-                  {{ project.description|truncatewords:20 }}
-                </p>
-              </div>
-              <div class="d-flex align-items-center gap-1 ms-2">
-                <a
-                  href="{% url 'tracker:project_update' project.pk %}"
-                  class="btn btn-sm btn-outline-secondary"
-                  >Edit</a
-                >
-                {% if project.is_archived %}
-                <a
-                  href="{% url 'tracker:project_unarchive_confirm' project.pk %}"
-                  class="btn btn-sm btn-outline-success"
-                  >Unarchive</a
-                >
-                {% else %}
-                <a
-                  href="{% url 'tracker:project_archive_confirm' project.pk %}"
-                  class="btn btn-sm btn-outline-warning"
-                  >Archive</a
-                >
-                {% endif %}
-                <a
-                  href="{% url 'tracker:project_delete' project.pk %}"
-                  class="btn btn-sm btn-outline-danger"
-                  >Delete</a
-                >
-              </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h4>Work Projects</h4>
             </div>
-          </li>
-          {% endfor %}
-        </ul>
-        {% else %}
-        <p class="text-center text-muted">No work projects found.</p>
-        {% endif %}
-      </div>
-    </div>
-  </div>
-  <div class="col-md-6">
-    <div class="card">
-      <div class="card-header">
-        <h4>Personal Projects</h4>
-      </div>
-      <div class="card-body">
-        {% if personal_projects %}
-        <ul class="list-group list-group-flush">
-          {% for project in personal_projects %}
-          <li
-            class="list-group-item {% if project.is_archived %}bg-warning bg-opacity-25{% endif %}"
-          >
-            <div class="d-flex justify-content-between align-items-center">
-              <div class="flex-grow-1">
-                <h5 class="mb-1">{{ project.name }}</h5>
-                <p class="mb-1 text-muted">
-                  {{ project.description|truncatewords:20 }}
-                </p>
-              </div>
-              <div class="d-flex align-items-center gap-1 ms-2">
-                <a
-                  href="{% url 'tracker:project_update' project.pk %}"
-                  class="btn btn-sm btn-outline-secondary"
-                  >Edit</a
-                >
-                {% if project.is_archived %}
-                <a
-                  href="{% url 'tracker:project_unarchive_confirm' project.pk %}"
-                  class="btn btn-sm btn-outline-success"
-                  >Unarchive</a
-                >
+            <div class="card-body">
+                {% if work_projects %}
+                <ul class="list-group list-group-flush">
+                    {% for project in work_projects %}
+                    <li class="list-group-item {% if project.is_archived %}bg-warning bg-opacity-25{% endif %}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="flex-grow-1">
+                                <h5 class="mb-1">{{ project.name }}</h5>
+                                <p class="mb-1 text-muted">{{ project.description|truncatewords:20 }}</p>
+                            </div>
+                            <div class="d-flex align-items-center gap-1 ms-2">
+                                <a href="{% url 'tracker:project_update' project.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                                {% if project.is_archived %}
+                                <a href="{% url 'tracker:project_unarchive_confirm' project.pk %}" class="btn btn-sm btn-outline-success">Unarchive</a>
+                                {% else %}
+                                <a href="{% url 'tracker:project_archive_confirm' project.pk %}" class="btn btn-sm btn-outline-warning">Archive</a>
+                                {% endif %}
+                                <a href="{% url 'tracker:project_delete' project.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+                            </div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
                 {% else %}
-                <a
-                  href="{% url 'tracker:project_archive_confirm' project.pk %}"
-                  class="btn btn-sm btn-outline-warning"
-                  >Archive</a
-                >
+                <p class="text-center text-muted">No work projects found.</p>
                 {% endif %}
-                <a
-                  href="{% url 'tracker:project_delete' project.pk %}"
-                  class="btn btn-sm btn-outline-danger"
-                  >Delete</a
-                >
-              </div>
             </div>
-          </li>
-          {% endfor %}
-        </ul>
-        {% else %}
-        <p class="text-center text-muted">No personal projects found.</p>
-        {% endif %}
-      </div>
+        </div>
     </div>
-  </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h4>Personal Projects</h4>
+            </div>
+            <div class="card-body">
+                {% if personal_projects %}
+                <ul class="list-group list-group-flush">
+                    {% for project in personal_projects %}
+                    <li class="list-group-item {% if project.is_archived %}bg-warning bg-opacity-25{% endif %}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="flex-grow-1">
+                                <h5 class="mb-1">{{ project.name }}</h5>
+                                <p class="mb-1 text-muted">{{ project.description|truncatewords:20 }}</p>
+                            </div>
+                            <div class="d-flex align-items-center gap-1 ms-2">
+                                <a href="{% url 'tracker:project_update' project.pk %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                                {% if project.is_archived %}
+                                <a href="{% url 'tracker:project_unarchive_confirm' project.pk %}" class="btn btn-sm btn-outline-success">Unarchive</a>
+                                {% else %}
+                                <a href="{% url 'tracker:project_archive_confirm' project.pk %}" class="btn btn-sm btn-outline-warning">Archive</a>
+                                {% endif %}
+                                <a href="{% url 'tracker:project_delete' project.pk %}" class="btn btn-sm btn-outline-danger">Delete</a>
+                            </div>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-center text-muted">No personal projects found.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

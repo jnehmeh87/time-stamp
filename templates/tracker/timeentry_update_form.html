@@ -1,130 +1,96 @@
-{% extends "base.html" %} {% load crispy_forms_tags %} {% load static %} {% load
-tracker_tags %} {% block title %}Edit Time Entry{% endblock %} {% block content
-%}
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+{% load static %}
+{% load tracker_tags %}
+
+{% block title %}Edit Time Entry{% endblock %}
+
+{% block content %}
 <div class="row justify-content-center">
-  <div class="col-md-8">
-    <div class="card">
-      <div class="card-header">
-        <h3>Edit Time Entry</h3>
-      </div>
-      <div class="card-body">
-        <form method="post" enctype="multipart/form-data">
-          {% csrf_token %} {{ form.non_field_errors }}
-
-          <div class="row">
-            <div class="col-md-4 mb-3">{{ form.title|as_crispy_field }}</div>
-            <div class="col-md-4 mb-3">{{ form.category|as_crispy_field }}</div>
-            <div class="col-md-4 mb-3">{{ form.project|as_crispy_field }}</div>
-          </div>
-
-          <hr />
-
-          <!-- Time Details Section -->
-          <div id="time-details-display">
-            <h5>Time Details</h5>
-            <p>
-              <strong>Date:</strong> {{ object.start_time|date:"M j, Y" }}<br />
-              <strong>Start Time:</strong> {{ object.start_time|date:"g:i:s A"
-              }}<br />
-              <strong>End Time:</strong> {{ object.end_time|date:"g:i:s A" }}<br />
-              <strong>Duration:</strong> {{ object.duration|human_duration }}<br />
-              <strong>Pause:</strong> {{ object.paused_duration|human_duration
-              }}
-            </p>
-            <button
-              type="button"
-              id="edit-time-btn"
-              class="btn btn-secondary btn-sm mb-3"
-            >
-              Edit Time Details
-            </button>
-          </div>
-
-          <div id="time-details-edit" class="d-none">
-            <h5>Edit Time Details</h5>
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                {{ form.start_time|as_crispy_field }}
-              </div>
-              <div class="col-md-6 mb-3">
-                {{ form.end_time|as_crispy_field }}
-              </div>
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3>Edit Time Entry</h3>
             </div>
-            <div class="row align-items-end">
-              <div class="col-md-4 mb-3">
-                {{ form.pause_hours|as_crispy_field }}
-              </div>
-              <div class="col-md-4 mb-3">
-                {{ form.pause_minutes|as_crispy_field }}
-              </div>
-              <div class="col-md-4 mb-3">
-                {{ form.pause_seconds|as_crispy_field }}
-              </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    {{ form.non_field_errors }}
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">{{ form.title|as_crispy_field }}</div>
+                        <div class="col-md-4 mb-3">{{ form.category|as_crispy_field }}</div>
+                        <div class="col-md-4 mb-3">{{ form.project|as_crispy_field }}</div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Time Details Section -->
+                    <div id="time-details-display">
+                        <h5>Time Details</h5>
+                        <p>
+                            <strong>Date:</strong> {{ object.start_time|date:"M j, Y" }}<br>
+                            <strong>Start Time:</strong> {{ object.start_time|date:"g:i:s A" }}<br>
+                            <strong>End Time:</strong> {{ object.end_time|date:"g:i:s A" }}<br>
+                            <strong>Duration:</strong> {{ object.duration|human_duration }}<br>
+                            <strong>Pause:</strong> {{ object.paused_duration|human_duration }}
+                        </p>
+                        <button type="button" id="edit-time-btn" class="btn btn-secondary btn-sm mb-3">Edit Time Details</button>
+                    </div>
+
+                    <div id="time-details-edit" class="d-none">
+                        <h5>Edit Time Details</h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">{{ form.start_time|as_crispy_field }}</div>
+                            <div class="col-md-6 mb-3">{{ form.end_time|as_crispy_field }}</div>
+                        </div>
+                        <div class="row align-items-end">
+                            <div class="col-md-4 mb-3">{{ form.pause_hours|as_crispy_field }}</div>
+                            <div class="col-md-4 mb-3">{{ form.pause_minutes|as_crispy_field }}</div>
+                            <div class="col-md-4 mb-3">{{ form.pause_seconds|as_crispy_field }}</div>
+                        </div>
+                    </div>
+                    <input type="hidden" name="time_details_edited_flag" id="time_details_edited_flag" value="false">
+                    <hr>
+
+                    <div class="mb-3">{{ form.description|as_crispy_field }}</div>
+                    <div class="mb-3">{{ form.notes|as_crispy_field }}</div>
+                    
+                    <!-- Existing Images -->
+                    {% if object.images.all %}
+                    <h5>Existing Images</h5>
+                    <div class="row" id="existing-images-container">
+                        {% for image in object.images.all %}
+                        <div class="col-md-3 mb-3" id="image-container-{{ image.id }}">
+                            <div class="card">
+                                <img src="{{ image.image.url }}" class="card-img-top" alt="Time Entry Image">
+                                <div class="card-body p-2 text-center">
+                                    <button type="button" class="btn btn-danger btn-sm delete-image-btn" data-image-id="{{ image.id }}">Delete</button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <hr>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label for="id_images" class="form-label">Upload New Images</label>
+                        <input type="file" name="images" class="form-control" multiple id="id_images">
+                    </div>
+
+                    <div class="d-flex justify-content-end">
+                        <a href="{% url 'tracker:entry_list' %}" class="btn btn-secondary me-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
             </div>
-          </div>
-          <input
-            type="hidden"
-            name="time_details_edited_flag"
-            id="time_details_edited_flag"
-            value="false"
-          />
-          <hr />
-
-          <div class="mb-3">{{ form.description|as_crispy_field }}</div>
-          <div class="mb-3">{{ form.notes|as_crispy_field }}</div>
-
-          <!-- Existing Images -->
-          {% if object.images.all %}
-          <h5>Existing Images</h5>
-          <div class="row" id="existing-images-container">
-            {% for image in object.images.all %}
-            <div class="col-md-3 mb-3" id="image-container-{{ image.id }}">
-              <div class="card">
-                <img
-                  src="{{ image.image.url }}"
-                  class="card-img-top"
-                  alt="Time Entry Image"
-                />
-                <div class="card-body p-2 text-center">
-                  <button
-                    type="button"
-                    class="btn btn-danger btn-sm delete-image-btn"
-                    data-image-id="{{ image.id }}"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
-            </div>
-            {% endfor %}
-          </div>
-          <hr />
-          {% endif %}
-
-          <div class="mb-3">
-            <label for="id_images" class="form-label">Upload New Images</label>
-            <input
-              type="file"
-              name="images"
-              class="form-control"
-              multiple
-              id="id_images"
-            />
-          </div>
-
-          <div class="d-flex justify-content-end">
-            <a
-              href="{% url 'tracker:entry_list' %}"
-              class="btn btn-secondary me-2"
-              >Cancel</a
-            >
-            <button type="submit" class="btn btn-primary">Save Changes</button>
-          </div>
-        </form>
-      </div>
+        </div>
     </div>
-  </div>
 </div>
-{% endblock %} {% block extra_js %}
+{% endblock %}
+
+{% block extra_js %}
 <script src="{% static 'js/timeentry_update_form.js' %}"></script>
 {% endblock %}

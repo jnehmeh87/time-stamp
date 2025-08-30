@@ -1,93 +1,61 @@
-{% extends "base.html" %} {% load tracker_tags %} {% block title %}{{
-trans.t_translated_report }}{% endblock %} {% block content %}
-<div {% if is_rtl %}dir="rtl" {% endif %}>
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1>Translated Report</h1>
-    <div>
-      <a
-        href="{{ request.get_full_path }}&export=pdf"
-        class="btn btn-outline-danger"
-        >Export as PDF</a
-      >
-      <a
-        href="{{ request.get_full_path }}&export=csv"
-        class="btn btn-outline-secondary"
-        >Export as CSV</a
-      >
-    </div>
-  </div>
+{% extends "base.html" %}
+{% load tracker_tags %}
 
-  <div class="card mb-4">
-    <div class="card-body">
-      <p class="mb-1">
-        <strong>{{ trans.t_project }}:</strong> {{
-        project.name|default:trans.t_all_projects }}
-      </p>
-      <p class="mb-1">
-        <strong>{{ trans.t_date_range }}:</strong> {{ start_date }} to {{
-        end_date }}
-      </p>
-      <p class="mb-0">
-        <strong>{{ trans.t_language }}:</strong> {{ target_language }}
-      </p>
-    </div>
-  </div>
+{% block title %}{{ trans.t_translated_report }}{% endblock %}
 
-  <div class="table-responsive">
-    <table class="table table-bordered">
-      <thead class="table-light">
-        <tr>
-          <th class="text-center">{{ trans.t_details }}</th>
-          <th class="text-center">{{ trans.t_start_time }}</th>
-          <th class="text-center">{{ trans.t_end_time }}</th>
-          <th class="text-center">{{ trans.t_duration }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for entry in entries %}
-        <tr>
-          <td>
-            {% if not project %}
-            <span
-              ><strong>{{ trans.t_project }}:</strong> {{
-              entry.original.project.name|default:"-" }}</span
-            ><br /><br />
-            {% endif %}
-            <span
-              ><strong>{{ trans.t_entry }}:</strong><br />{{
-              entry.original.title }}</span
-            ><br />
-            <span class="text-primary">{{ entry.title }}</span><br /><br />
-            <small
-              ><strong>{{ trans.t_description }}:</strong><br />{{
-              entry.original.description|default:"-" }}</small
-            ><br />
-            <small class="text-primary"
-              >{{ entry.description|default:"-" }}</small
-            ><br /><br />
-            <small
-              ><strong>{{ trans.t_notes }}:</strong><br />{{
-              entry.original.notes|default:"-" }}</small
-            ><br />
-            <small class="text-primary">{{ entry.notes|default:"-" }}</small>
-          </td>
-          <td class="text-center">
-            {{ entry.original.start_time|date:"Y-m-d H:i" }}
-          </td>
-          <td class="text-center">
-            {{ entry.original.end_time|date:"Y-m-d H:i" }}
-          </td>
-          <td class="text-center">
-            {{ entry.original.duration|human_duration }}
-          </td>
-        </tr>
-        {% empty %}
-        <tr>
-          <td colspan="4" class="text-center">{{ trans.t_no_entries }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
+{% block content %}
+<div {% if is_rtl %}dir="rtl"{% endif %}>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Translated Report</h1>
+        <div>
+            <a href="{{ request.get_full_path }}&export=pdf" class="btn btn-outline-danger">Export as PDF</a>
+            <a href="{{ request.get_full_path }}&export=csv" class="btn btn-outline-secondary">Export as CSV</a>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <p class="mb-1"><strong>{{ trans.t_project }}:</strong> {{ project.name|default:trans.t_all_projects }}</p>
+            <p class="mb-1"><strong>{{ trans.t_date_range }}:</strong> {{ start_date }} to {{ end_date }}</p>
+            <p class="mb-0"><strong>{{ trans.t_language }}:</strong> {{ target_language }}</p>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered">
+            <thead class="table-light">
+                <tr>
+                    <th class="text-center">{{ trans.t_details }}</th>
+                    <th class="text-center">{{ trans.t_start_time }}</th>
+                    <th class="text-center">{{ trans.t_end_time }}</th>
+                    <th class="text-center">{{ trans.t_duration }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in entries %}
+                <tr>
+                    <td>
+                        {% if not project %}
+                        <span><strong>{{ trans.t_project }}:</strong> {{ entry.original.project.name|default:"-" }}</span><br><br>
+                        {% endif %}
+                        <span><strong>{{ trans.t_entry }}:</strong><br>{{ entry.original.title }}</span><br>
+                        <span class="text-primary">{{ entry.title }}</span><br><br>
+                        <small><strong>{{ trans.t_description }}:</strong><br>{{ entry.original.description|default:"-" }}</small><br>
+                        <small class="text-primary">{{ entry.description|default:"-" }}</small><br><br>
+                        <small><strong>{{ trans.t_notes }}:</strong><br>{{ entry.original.notes|default:"-" }}</small><br>
+                        <small class="text-primary">{{ entry.notes|default:"-" }}</small>
+                    </td>
+                    <td class="text-center">{{ entry.original.start_time|date:"Y-m-d H:i" }}</td>
+                    <td class="text-center">{{ entry.original.end_time|date:"Y-m-d H:i" }}</td>
+                    <td class="text-center">{{ entry.original.duration|human_duration }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4" class="text-center">{{ trans.t_no_entries }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </div>
 {% endblock %}

@@ -1,58 +1,39 @@
-{% extends "base.html" %} {% block title %}Welcome to Time Stamp{% endblock %}
+{% extends "base.html" %}
+
+{% block title %}Welcome to Time Stamp{% endblock %}
+
 {% block content %}
 <div class="container text-center py-5">
-  <div class="row justify-content-center">
-    <div class="col-lg-8">
-      <h1 class="display-4 fw-bold">Time Stamp</h1>
-      <p class="lead text-muted mt-3">
-        Effortless Time Tracking for Your Projects.
-      </p>
-      <p class="mt-4">
-        Whether for work or personal projects, Time Stamp helps you monitor your
-        time with a simple, intuitive interface. Track your progress, generate
-        detailed reports, and even translate them for your international
-        clients.
-      </p>
-      <div class="d-grid gap-2 d-sm-flex justify-content-sm-center mt-5">
-        <a
-          href="{% url 'account_signup' %}"
-          class="btn btn-primary btn-lg px-4 gap-3"
-          >Get Started for Free</a
-        >
-        <a
-          href="{% url 'account_login' %}"
-          class="btn btn-outline-secondary btn-lg px-4"
-          >Login</a
-        >
-      </div>
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <h1 class="display-4 fw-bold">Time Stamp</h1>
+            <p class="lead text-muted mt-3">Effortless Time Tracking for Your Projects.</p>
+            <p class="mt-4">
+                Whether for work or personal projects, Time Stamp helps you monitor your time with a simple, intuitive interface. Track your progress, generate detailed reports, and even translate them for your international clients.
+            </p>
+            <div class="d-grid gap-2 d-sm-flex justify-content-sm-center mt-5">
+                <a href="{% url 'account_signup' %}" class="btn btn-primary btn-lg px-4 gap-3">Get Started for Free</a>
+                <a href="{% url 'account_login' %}" class="btn btn-outline-secondary btn-lg px-4">Login</a>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
 
 <div class="container px-4 py-5" id="featured-3">
-  <h2 class="pb-2 border-bottom text-center">Features</h2>
-  <div class="row g-4 py-5 row-cols-1 row-cols-lg-3">
-    <div class="feature col text-center">
-      <h3 class="fs-2">Simple Timer</h3>
-      <p>
-        Start and stop a timer for any task with a single click. Add details,
-        notes, and images to your time entries later.
-      </p>
+    <h2 class="pb-2 border-bottom text-center">Features</h2>
+    <div class="row g-4 py-5 row-cols-1 row-cols-lg-3">
+      <div class="feature col text-center">
+        <h3 class="fs-2">Simple Timer</h3>
+        <p>Start and stop a timer for any task with a single click. Add details, notes, and images to your time entries later.</p>
+      </div>
+      <div class="feature col text-center">
+        <h3 class="fs-2">Project Organization</h3>
+        <p>Organize your time entries by project and category. Keep your work and personal tasks neatly separated.</p>
+      </div>
+      <div class="feature col text-center">
+        <h3 class="fs-2">Powerful Reports</h3>
+        <p>Generate detailed reports by date, project, or category. Export your data to PDF or CSV, and translate reports instantly.</p>
+      </div>
     </div>
-    <div class="feature col text-center">
-      <h3 class="fs-2">Project Organization</h3>
-      <p>
-        Organize your time entries by project and category. Keep your work and
-        personal tasks neatly separated.
-      </p>
-    </div>
-    <div class="feature col text-center">
-      <h3 class="fs-2">Powerful Reports</h3>
-      <p>
-        Generate detailed reports by date, project, or category. Export your
-        data to PDF or CSV, and translate reports instantly.
-      </p>
-    </div>
-  </div>
 </div>
 {% endblock %}
