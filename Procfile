@@ -1,1 +1,1 @@
-web: node index.js
+web: gunicorn time_stamp.wsgi --log-file -
