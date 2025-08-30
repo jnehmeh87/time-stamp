@@ -24,10 +24,6 @@ ALLOWED_HOSTS = []
 # If running on Heroku or another production environment
 if not DEBUG:
     ALLOWED_HOSTS = ['timestamp-trackr-68fdb365e285.herokuapp.com']
-    # Add these settings for Heroku deployment
-    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
 else:
     ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
