@@ -46,7 +46,7 @@
     </div>
 </div>
 
-{% if project %}
+{% if project and project.hourly_rate %}
 <div class="card mt-4">
     <div class="card-header">
         <h4>Summary for {{ project.name }}</h4>
