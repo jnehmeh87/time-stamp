@@ -1,11 +1,11 @@
 /* Style for intl-tel-input to match Bootstrap form-control */
 .iti {
-    width: 100%;
-    display: block;
+  width: 100%;
+  display: block;
 }
 
 /* Ensure the input field inside the library's container has the correct border-radius */
 .iti .form-control {
-    border-top-left-radius: 0;
-    border-bottom-left-radius: 0;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
 }

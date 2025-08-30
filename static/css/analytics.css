@@ -1,9 +1,10 @@
 #activityLineChart {
-    min-height: 350px; /* Default height for mobile/tablet */
+  min-height: 350px; /* Default height for mobile/tablet */
 }
 
-@media (min-width: 992px) { /* lg breakpoint and up */
-    #activityLineChart {
-        min-height: 650px; /* Height for desktop */
-    }
+@media (min-width: 992px) {
+  /* lg breakpoint and up */
+  #activityLineChart {
+    min-height: 650px; /* Height for desktop */
+  }
 }

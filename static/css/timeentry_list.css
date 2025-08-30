@@ -1,10 +1,11 @@
 /* --- Existing Table Styles (Preserved) --- */
-.table td, .table thead th {
-    vertical-align: middle; /* Vertically center all header and cell content */
+.table td,
+.table thead th {
+  vertical-align: middle; /* Vertically center all header and cell content */
 }
 
 .table thead th:first-child {
-    padding: 0; /* Remove padding from the empty checkbox header cell */
+  padding: 0; /* Remove padding from the empty checkbox header cell */
 }
 /* Columns that should not wrap */
 .table th:nth-child(2), .table td:nth-child(2), /* Status */
@@ -15,65 +16,64 @@
 .table th:nth-child(9), .table td:nth-child(9), /* Start Time */
 .table th:nth-child(10), .table td:nth-child(10), /* End Time */
 .table th:nth-child(11), .table td:nth-child(11), /* Duration */
-.table th:nth-child(12), .table td:nth-child(12) /* Category */
-{
-    white-space: nowrap;
+.table th:nth-child(12), .table td:nth-child(12) /* Category */ {
+  white-space: nowrap;
 }
 /* Columns that can wrap but have a minimum width */
 .table th:nth-child(5), .table td:nth-child(5), /* Description */
-.table th:nth-child(6), .table td:nth-child(6)  /* Notes */
-{
-    min-width: 200px;
+.table th:nth-child(6), .table td:nth-child(6)  /* Notes */ {
+  min-width: 200px;
 }
 
 /* --- New Filter Button Styles --- */
 .btn-link {
-    color: var(--bs-body-color);
-    padding: 0;
+  color: var(--bs-body-color);
+  padding: 0;
 }
-.btn-link:focus, .btn-link:hover {
-    color: var(--bs-body-color);
+.btn-link:focus,
+.btn-link:hover {
+  color: var(--bs-body-color);
 }
 .filter-toggle-icon {
-    font-size: 1.5rem;
-    font-weight: 300;
-    line-height: 1;
-    transition: transform 0.2s ease-in-out;
+  font-size: 1.5rem;
+  font-weight: 300;
+  line-height: 1;
+  transition: transform 0.2s ease-in-out;
 }
-.card-header [aria-expanded="true"] .filter-toggle-icon {
-    transform: rotate(45deg);
+.card-header [aria-expanded='true'] .filter-toggle-icon {
+  transform: rotate(45deg);
 }
 
 .clickable-card {
-    cursor: pointer;
-    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  cursor: pointer;
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
 .clickable-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  transform: translateY(-5px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* --- Action Button Width Fix --- */
 .archive-action-btn {
-    min-width: 95px; /* Ensures both Archive and Unarchive buttons have the same width */
-    text-align: center;
+  min-width: 95px; /* Ensures both Archive and Unarchive buttons have the same width */
+  text-align: center;
 }
 
 /* --- Mobile Bulk Action Button Styles --- */
 @media (max-width: 575.98px) {
-    #bulk-action-form .btn {
-        padding: 0.25rem 0.75rem;
-        font-size: 0.875rem;
-    }
+  #bulk-action-form .btn {
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+  }
 }
 
 .table th:hover {
-    cursor: grab;
+  cursor: grab;
 }
 .table th a {
-    color: inherit;
-    text-decoration: none;
+  color: inherit;
+  text-decoration: none;
 }
 .table th a:hover {
-    color: inherit;
+  color: inherit;
 }

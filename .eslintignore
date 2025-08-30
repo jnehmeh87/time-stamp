@@ -1,0 +1,12 @@
+# Ignore dependencies
+node_modules/
+
+# Ignore Python virtual environment
+venv/
+
+# Ignore build output
+dist/
+build/
+
+# Ignore coverage reports
+coverage/

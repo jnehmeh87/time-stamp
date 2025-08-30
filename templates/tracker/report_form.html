@@ -1,147 +1,210 @@
-{% extends "base.html" %}
-{% load tracker_tags %}
-{% load static %}
-
-{% block title %}Generate Report{% endblock %}
-
-{% block content %}
+{% extends "base.html" %} {% load tracker_tags %} {% load static %} {% block
+title %}Generate Report{% endblock %} {% block content %}
 <h1>Generate Report</h1>
 
 <div class="card mb-4">
-    <div class="card-body">
-        <form method="get" id="reportForm">
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <label for="{{ form.category.id_for_label }}" class="form-label">Category</label>
-                    {{ form.category }}
-                </div>
-                <div class="col-md-3">
-                    <label for="{{ form.project.id_for_label }}" class="form-label">Project</label>
-                    {{ form.project }}
-                </div>
-                <div class="col-md-3">
-                    <label for="{{ form.start_date.id_for_label }}" class="form-label">Start Date</label>
-                    {{ form.start_date }}
-                </div>
-                <div class="col-md-3">
-                    <label for="{{ form.end_date.id_for_label }}" class="form-label">End Date</label>
-                    {{ form.end_date }}
-                </div>
-            </div>
-            <div class="d-flex gap-2 mt-3">
-                <button type="submit" class="btn btn-primary">Generate Report</button>
-            </div>
-        </form>
-    </div>
+  <div class="card-body">
+    <form method="get" id="reportForm">
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label for="{{ form.category.id_for_label }}" class="form-label"
+            >Category</label
+          >
+          {{ form.category }}
+        </div>
+        <div class="col-md-3">
+          <label for="{{ form.project.id_for_label }}" class="form-label"
+            >Project</label
+          >
+          {{ form.project }}
+        </div>
+        <div class="col-md-3">
+          <label for="{{ form.start_date.id_for_label }}" class="form-label"
+            >Start Date</label
+          >
+          {{ form.start_date }}
+        </div>
+        <div class="col-md-3">
+          <label for="{{ form.end_date.id_for_label }}" class="form-label"
+            >End Date</label
+          >
+          {{ form.end_date }}
+        </div>
+      </div>
+      <div class="d-flex gap-2 mt-3">
+        <button type="submit" class="btn btn-primary">Generate Report</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 {% if entries is not None %}
 <div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h4>Report Summary</h4>
-        <div class="d-flex gap-2">
-            <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#translateModal">
-                Translate
-            </button>
-            <a href="?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}{% if project %}&project={{ project.pk }}{% endif %}&export=pdf" class="btn btn-danger btn-sm">
-                Export to PDF
-            </a>
-            <a href="?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}{% if project %}&project={{ project.pk }}{% endif %}&export=csv" class="btn btn-secondary btn-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-download" viewBox="0 0 16 16">
-                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
-                    <path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/>
-                </svg>
-                Export to CSV
-            </a>
-        </div>
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <h4>Report Summary</h4>
+    <div class="d-flex gap-2">
+      <button
+        type="button"
+        class="btn btn-info btn-sm"
+        data-bs-toggle="modal"
+        data-bs-target="#translateModal"
+      >
+        Translate
+      </button>
+      <a
+        href="?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}{% if project %}&project={{ project.pk }}{% endif %}&export=pdf"
+        class="btn btn-danger btn-sm"
+      >
+        Export to PDF
+      </a>
+      <a
+        href="?start_date={{ start_date|date:'Y-m-d' }}&end_date={{ end_date|date:'Y-m-d' }}{% if project %}&project={{ project.pk }}{% endif %}&export=csv"
+        class="btn btn-secondary btn-sm"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          fill="currentColor"
+          class="bi bi-download"
+          viewBox="0 0 16 16"
+        >
+          <path
+            d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"
+          />
+          <path
+            d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"
+          />
+        </svg>
+        Export to CSV
+      </a>
     </div>
-    <div class="card-body">
-        <p><strong>Period:</strong> {{ start_date|date:"Y-m-d" }} to {{ end_date|date:"Y-m-d" }}</p>
-        <p><strong>Project:</strong> {{ project.name|default:"All Projects" }}</p>
-        <p><strong>Total Time Tracked:</strong> {{ total_duration|human_duration }}</p><br>
-        <h5 class="mt-4">Detailed Entries</h5>
-        <hr>
-        <div class="table-responsive">
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Title</th>
-                        <th>Project</th>
-                        <th>Start Time</th>
-                        <th>End Time</th>
-                        <th>Duration</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for entry in entries %}
-                    <tr>
-                        <td>{{ entry.title }}</td>
-                        <td>{{ entry.project.name|default:"-" }}</td>
-                        <td>{{ entry.start_time|date:"Y-m-d H:i" }}</td>
-                        <td>{{ entry.end_time|date:"Y-m-d H:i" }}</td>
-                        <td>{{ entry.duration|human_duration }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="5" class="text-center">No entries found for this period.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+  </div>
+  <div class="card-body">
+    <p>
+      <strong>Period:</strong> {{ start_date|date:"Y-m-d" }} to {{
+      end_date|date:"Y-m-d" }}
+    </p>
+    <p><strong>Project:</strong> {{ project.name|default:"All Projects" }}</p>
+    <p>
+      <strong>Total Time Tracked:</strong> {{ total_duration|human_duration }}
+    </p>
+    <br />
+    <h5 class="mt-4">Detailed Entries</h5>
+    <hr />
+    <div class="table-responsive">
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>Title</th>
+            <th>Project</th>
+            <th>Start Time</th>
+            <th>End Time</th>
+            <th>Duration</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for entry in entries %}
+          <tr>
+            <td>{{ entry.title }}</td>
+            <td>{{ entry.project.name|default:"-" }}</td>
+            <td>{{ entry.start_time|date:"Y-m-d H:i" }}</td>
+            <td>{{ entry.end_time|date:"Y-m-d H:i" }}</td>
+            <td>{{ entry.duration|human_duration }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="text-center">
+              No entries found for this period.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
+  </div>
 </div>
 
 <!-- Translate Modal -->
-<div class="modal fade" id="translateModal" tabindex="-1" aria-labelledby="translateModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="translateModalLabel">Translate Report</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form action="{% url 'tracker:translate_report' %}" method="get">
-                <div class="modal-body">
-                    <input type="hidden" name="start_date" value="{{ start_date|date:'Y-m-d' }}">
-                    <input type="hidden" name="end_date" value="{{ end_date|date:'Y-m-d' }}">
-                    {% if project %}
-                    <input type="hidden" name="project" value="{{ project.pk }}">
-                    {% endif %}
-                    <div class="mb-3">
-                        <label for="target_language" class="form-label">Translate to:</label>
-                        <select name="target_language" id="target_language" class="form-select" required>
-                            <option value="en">English</option>
-                            <option value="es">Spanish</option>
-                            <option value="fr">French</option>
-                            <option value="de">German</option>
-                            <option value="it">Italian</option>
-                            <option value="ja">Japanese</option>
-                            <option value="ru">Russian</option>
-                            <option value="ar">Arabic</option>
-                            <!-- Add other languages as needed -->
-                        </select>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-primary">Translate</button>
-                </div>
-            </form>
+<div
+  class="modal fade"
+  id="translateModal"
+  tabindex="-1"
+  aria-labelledby="translateModalLabel"
+  aria-hidden="true"
+>
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="translateModalLabel">Translate Report</h5>
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="modal"
+          aria-label="Close"
+        ></button>
+      </div>
+      <form action="{% url 'tracker:translate_report' %}" method="get">
+        <div class="modal-body">
+          <input
+            type="hidden"
+            name="start_date"
+            value="{{ start_date|date:'Y-m-d' }}"
+          />
+          <input
+            type="hidden"
+            name="end_date"
+            value="{{ end_date|date:'Y-m-d' }}"
+          />
+          {% if project %}
+          <input type="hidden" name="project" value="{{ project.pk }}" />
+          {% endif %}
+          <div class="mb-3">
+            <label for="target_language" class="form-label"
+              >Translate to:</label
+            >
+            <select
+              name="target_language"
+              id="target_language"
+              class="form-select"
+              required
+            >
+              <option value="en">English</option>
+              <option value="es">Spanish</option>
+              <option value="fr">French</option>
+              <option value="de">German</option>
+              <option value="it">Italian</option>
+              <option value="ja">Japanese</option>
+              <option value="ru">Russian</option>
+              <option value="ar">Arabic</option>
+              <!-- Add other languages as needed -->
+            </select>
+          </div>
         </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            data-bs-dismiss="modal"
+          >
+            Close
+          </button>
+          <button type="submit" class="btn btn-primary">Translate</button>
+        </div>
+      </form>
     </div>
+  </div>
 </div>
-{% endif %}
-{% endblock %}
-
-{% block extra_js %}
+{% endif %} {% endblock %} {% block extra_js %}
 <script>
-    // Pass the Django URL to the project select element for the external JS to use.
-    document.addEventListener('DOMContentLoaded', function() {
-        const projectSelect = document.getElementById('id_project');
-        if (projectSelect) {
-            projectSelect.dataset.projectDatesUrl = "{% url 'tracker:ajax_get_project_dates' %}";
-        }
-    });
+  // Pass the Django URL to the project select element for the external JS to use.
+  document.addEventListener('DOMContentLoaded', function () {
+    const projectSelect = document.getElementById('id_project');
+    if (projectSelect) {
+      projectSelect.dataset.projectDatesUrl =
+        "{% url 'tracker:ajax_get_project_dates' %}";
+    }
+  });
 </script>
 <script src="{% static 'js/report_form.js' %}"></script>
 {% endblock %}

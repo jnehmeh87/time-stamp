@@ -1,154 +1,223 @@
-{% extends "base.html" %}
-{% load tracker_tags %}
-{% load static %}
-
-{% block title %}Analytics Dashboard{% endblock %}
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/analytics.css' %}">
-{% endblock %}
-
-{% block content %}
-<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
-    <h1>Analytics Dashboard</h1>
-    <div class="btn-group">
-        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="fas fa-calendar-alt me-1"></i>
-            {% if active_period == '7d' %}Last 7 Days
-            {% elif active_period == '15d' %}Last 15 Days
-            {% elif active_period == '30d' %}Last 30 Days
-            {% elif active_period == '3m' %}Last 3 Months
-            {% elif active_period == '6m' %}Last 6 Months
-            {% elif active_period == '1y' %}Last 1 Year
-            {% elif active_period == 'all' %}All Time
-            {% else %}Select Period
-            {% endif %}
-        </button>
-        <ul class="dropdown-menu dropdown-menu-end">
-            <li><a class="dropdown-item {% if active_period == '7d' %}active{% endif %}" href="?period=7d">Last 7 Days</a></li>
-            <li><a class="dropdown-item {% if active_period == '15d' %}active{% endif %}" href="?period=15d">Last 15 Days</a></li>
-            <li><a class="dropdown-item {% if active_period == '30d' %}active{% endif %}" href="?period=30d">Last 30 Days</a></li>
-            <li><a class="dropdown-item {% if active_period == '3m' %}active{% endif %}" href="?period=3m">Last 3 Months</a></li>
-            <li><a class="dropdown-item {% if active_period == '6m' %}active{% endif %}" href="?period=6m">Last 6 Months</a></li>
-            <li><a class="dropdown-item {% if active_period == '1y' %}active{% endif %}" href="?period=1y">Last 1 Year</a></li>
-            <li><hr class="dropdown-divider"></li>
-            <li><a class="dropdown-item {% if active_period == 'all' %}active{% endif %}" href="?period=all">All Time</a></li>
-        </ul>
-    </div>
+{% extends "base.html" %} {% load tracker_tags %} {% load static %} {% block
+title %}Analytics Dashboard{% endblock %} {% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/analytics.css' %}" />
+{% endblock %} {% block content %}
+<div
+  class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2"
+>
+  <h1>Analytics Dashboard</h1>
+  <div class="btn-group">
+    <button
+      type="button"
+      class="btn btn-outline-secondary dropdown-toggle"
+      data-bs-toggle="dropdown"
+      aria-expanded="false"
+    >
+      <i class="fas fa-calendar-alt me-1"></i>
+      {% if active_period == '7d' %}Last 7 Days {% elif active_period == '15d'
+      %}Last 15 Days {% elif active_period == '30d' %}Last 30 Days {% elif
+      active_period == '3m' %}Last 3 Months {% elif active_period == '6m' %}Last
+      6 Months {% elif active_period == '1y' %}Last 1 Year {% elif active_period
+      == 'all' %}All Time {% else %}Select Period {% endif %}
+    </button>
+    <ul class="dropdown-menu dropdown-menu-end">
+      <li>
+        <a
+          class="dropdown-item {% if active_period == '7d' %}active{% endif %}"
+          href="?period=7d"
+          >Last 7 Days</a
+        >
+      </li>
+      <li>
+        <a
+          class="dropdown-item {% if active_period == '15d' %}active{% endif %}"
+          href="?period=15d"
+          >Last 15 Days</a
+        >
+      </li>
+      <li>
+        <a
+          class="dropdown-item {% if active_period == '30d' %}active{% endif %}"
+          href="?period=30d"
+          >Last 30 Days</a
+        >
+      </li>
+      <li>
+        <a
+          class="dropdown-item {% if active_period == '3m' %}active{% endif %}"
+          href="?period=3m"
+          >Last 3 Months</a
+        >
+      </li>
+      <li>
+        <a
+          class="dropdown-item {% if active_period == '6m' %}active{% endif %}"
+          href="?period=6m"
+          >Last 6 Months</a
+        >
+      </li>
+      <li>
+        <a
+          class="dropdown-item {% if active_period == '1y' %}active{% endif %}"
+          href="?period=1y"
+          >Last 1 Year</a
+        >
+      </li>
+      <li><hr class="dropdown-divider" /></li>
+      <li>
+        <a
+          class="dropdown-item {% if active_period == 'all' %}active{% endif %}"
+          href="?period=all"
+          >All Time</a
+        >
+      </li>
+    </ul>
+  </div>
 </div>
 
 <!-- Summary Cards -->
 <div class="row">
-    <div class="col-md-6 mb-4">
-        <div class="card text-center h-100">
-            <div class="card-body d-flex flex-column justify-content-center">
-                <h5 class="card-title">Total Time Tracked</h5>
-                <div class="row align-items-center mt-2">
-                    <div class="col-6 border-end">
-                        <h6 class="text-muted mb-0">Work</h6>
-                        <p class="h4 fw-light mb-0">{{ work_duration|human_duration }}</p>
-                    </div>
-                    <div class="col-6">
-                        <h6 class="text-muted mb-0">Personal</h6>
-                        <p class="h4 fw-light mb-0">{{ personal_duration|human_duration }}</p>
-                    </div>
-                </div>
-            </div>
+  <div class="col-md-6 mb-4">
+    <div class="card text-center h-100">
+      <div class="card-body d-flex flex-column justify-content-center">
+        <h5 class="card-title">Total Time Tracked</h5>
+        <div class="row align-items-center mt-2">
+          <div class="col-6 border-end">
+            <h6 class="text-muted mb-0">Work</h6>
+            <p class="h4 fw-light mb-0">{{ work_duration|human_duration }}</p>
+          </div>
+          <div class="col-6">
+            <h6 class="text-muted mb-0">Personal</h6>
+            <p class="h4 fw-light mb-0">
+              {{ personal_duration|human_duration }}
+            </p>
+          </div>
         </div>
+      </div>
     </div>
-    <div class="col-md-6 mb-4">
-        <div class="card text-center h-100">
-            <div class="card-body">
-                <h5 class="card-title">Total Estimated Earnings</h5>
-                <p class="card-text display-4">{{ total_earnings|floatformat:2 }} <span class="fs-4 text-muted">SEK</span></p>
-                <small class="text-muted">From projects with an hourly rate.</small>
-            </div>
-        </div>
+  </div>
+  <div class="col-md-6 mb-4">
+    <div class="card text-center h-100">
+      <div class="card-body">
+        <h5 class="card-title">Total Estimated Earnings</h5>
+        <p class="card-text display-4">
+          {{ total_earnings|floatformat:2 }}
+          <span class="fs-4 text-muted">SEK</span>
+        </p>
+        <small class="text-muted">From projects with an hourly rate.</small>
+      </div>
     </div>
+  </div>
 </div>
 
 <!-- Charts Row 1 -->
 <div class="row">
-    <div class="col-lg-6 mb-4">
-        <div class="card h-100">
-            <div class="card-header">
-                <h4>Time Distribution by Category</h4>
-            </div>
-            <div class="card-body d-flex justify-content-center align-items-center">
-                {% if category_chart_data %}
-                    <canvas id="categoryDoughnutChart"></canvas>
-                {% else %}
-                    <p class="text-muted">No time tracked yet.</p>
-                {% endif %}
-            </div>
-        </div>
+  <div class="col-lg-6 mb-4">
+    <div class="card h-100">
+      <div class="card-header">
+        <h4>Time Distribution by Category</h4>
+      </div>
+      <div class="card-body d-flex justify-content-center align-items-center">
+        {% if category_chart_data %}
+        <canvas id="categoryDoughnutChart"></canvas>
+        {% else %}
+        <p class="text-muted">No time tracked yet.</p>
+        {% endif %}
+      </div>
     </div>
-    <div class="col-lg-6 mb-4">
-        <div class="card h-100">
-            <div class="card-header">
-                <h4>Earnings by Project</h4>
-            </div>
-            <div class="card-body">
-                {% if earnings_chart_data %}
-                    <canvas id="earningsBarChart"></canvas>
-                {% else %}
-                    <p class="text-muted">No earnings to display. Set hourly rates on your projects.</p>
-                {% endif %}
-            </div>
-        </div>
+  </div>
+  <div class="col-lg-6 mb-4">
+    <div class="card h-100">
+      <div class="card-header">
+        <h4>Earnings by Project</h4>
+      </div>
+      <div class="card-body">
+        {% if earnings_chart_data %}
+        <canvas id="earningsBarChart"></canvas>
+        {% else %}
+        <p class="text-muted">
+          No earnings to display. Set hourly rates on your projects.
+        </p>
+        {% endif %}
+      </div>
     </div>
+  </div>
 </div>
 
 <!-- Chart Row 2 -->
 <div class="row">
-    <div class="col-12 mb-4">
-        <div class="card" id="activity-chart-card">
-            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <h4 class="mb-0 me-auto">Activity by Project Over
-                    {% if active_period == '7d' %}Last 7 Days
-                    {% elif active_period == '15d' %}Last 15 Days
-                    {% elif active_period == '30d' %}Last 30 Days
-                    {% elif active_period == '3m' %}Last 3 Months
-                    {% elif active_period == '6m' %}Last 6 Months
-                    {% elif active_period == '1y' %}Last Year
-                    {% elif active_period == 'all' %}All Time
-                    {% endif %}
-                    (Hours)
-                </h4>
-                <div class="btn-group">
-                    <button id="category-filter-btn" type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="fas fa-filter me-1"></i>
-                        {% if active_category == 'work' %}Work
-                        {% elif active_category == 'personal' %}Personal
-                        {% else %}All Categories
-                        {% endif %}
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item category-filter-item {% if not active_category or active_category == 'all' %}active{% endif %}" href="?period={{ active_period }}&category=all" data-category="all">All Categories</a></li>
-                        <li><a class="dropdown-item category-filter-item {% if active_category == 'work' %}active{% endif %}" href="?period={{ active_period }}&category=work" data-category="work">Work</a></li>
-                        <li><a class="dropdown-item category-filter-item {% if active_category == 'personal' %}active{% endif %}" href="?period={{ active_period }}&category=personal" data-category="personal">Personal</a></li>
-                    </ul>
-                </div>
-            </div>
-            <div class="card-body">
-                {% if activity_chart_datasets %}
-                    <canvas id="activityLineChart"></canvas>
-                {% else %}
-                    <p class="text-muted">No activity for the selected period and category.</p>
-                {% endif %}
-            </div>
+  <div class="col-12 mb-4">
+    <div class="card" id="activity-chart-card">
+      <div
+        class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2"
+      >
+        <h4 class="mb-0 me-auto">
+          Activity by Project Over {% if active_period == '7d' %}Last 7 Days {%
+          elif active_period == '15d' %}Last 15 Days {% elif active_period ==
+          '30d' %}Last 30 Days {% elif active_period == '3m' %}Last 3 Months {%
+          elif active_period == '6m' %}Last 6 Months {% elif active_period ==
+          '1y' %}Last Year {% elif active_period == 'all' %}All Time {% endif %}
+          (Hours)
+        </h4>
+        <div class="btn-group">
+          <button
+            id="category-filter-btn"
+            type="button"
+            class="btn btn-outline-secondary dropdown-toggle"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+          >
+            <i class="fas fa-filter me-1"></i>
+            {% if active_category == 'work' %}Work {% elif active_category ==
+            'personal' %}Personal {% else %}All Categories {% endif %}
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li>
+              <a
+                class="dropdown-item category-filter-item {% if not active_category or active_category == 'all' %}active{% endif %}"
+                href="?period={{ active_period }}&category=all"
+                data-category="all"
+                >All Categories</a
+              >
+            </li>
+            <li>
+              <a
+                class="dropdown-item category-filter-item {% if active_category == 'work' %}active{% endif %}"
+                href="?period={{ active_period }}&category=work"
+                data-category="work"
+                >Work</a
+              >
+            </li>
+            <li>
+              <a
+                class="dropdown-item category-filter-item {% if active_category == 'personal' %}active{% endif %}"
+                href="?period={{ active_period }}&category=personal"
+                data-category="personal"
+                >Personal</a
+              >
+            </li>
+          </ul>
         </div>
+      </div>
+      <div class="card-body">
+        {% if activity_chart_datasets %}
+        <canvas id="activityLineChart"></canvas>
+        {% else %}
+        <p class="text-muted">
+          No activity for the selected period and category.
+        </p>
+        {% endif %}
+      </div>
     </div>
+  </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-{{ category_chart_labels|json_script:"category_chart_labels" }}
-{{ category_chart_data|json_script:"category_chart_data" }}
-{{ earnings_chart_labels|json_script:"earnings_chart_labels" }}
-{{ earnings_chart_data|json_script:"earnings_chart_data" }}
-{{ activity_chart_labels|json_script:"activity_chart_labels" }}
-{{ activity_chart_datasets|json_script:"activity_chart_datasets" }}
+{% endblock %} {% block extra_js %} {{
+category_chart_labels|json_script:"category_chart_labels" }} {{
+category_chart_data|json_script:"category_chart_data" }} {{
+earnings_chart_labels|json_script:"earnings_chart_labels" }} {{
+earnings_chart_data|json_script:"earnings_chart_data" }} {{
+activity_chart_labels|json_script:"activity_chart_labels" }} {{
+activity_chart_datasets|json_script:"activity_chart_datasets" }}
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="{% static 'js/analytics.js' %}"></script>

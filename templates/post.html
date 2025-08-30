@@ -1,14 +1,17 @@
-{% extends "base.html" %}
-
-{% block head %}
-    {{ super() }}
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/post.css') }}">
-{% endblock %}
-
-{% block app_content %}
-    <!-- ...existing code... -->
-    <br>
-    <button type="button" class="btn btn-primary"
-            onclick="translate('#post{{ post.id }}', '#translation{{ post.id }}', '{{ post.language }}', '{{ g.locale }}', '{{ url_for('static', filename='loading.gif') }}')">{{ _('Translate') }}</button>
-    <div id="translation{{ post.id }}"></div>
+{% extends "base.html" %} {% block head %} {{ super() }}
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/post.css') }}"
+/>
+{% endblock %} {% block app_content %}
+<!-- ...existing code... -->
+<br />
+<button
+  type="button"
+  class="btn btn-primary"
+  onclick="translate('#post{{ post.id }}', '#translation{{ post.id }}', '{{ post.language }}', '{{ g.locale }}', '{{ url_for('static', filename='loading.gif') }}')"
+>
+  {{ _('Translate') }}
+</button>
+<div id="translation{{ post.id }}"></div>
 {% endblock %}

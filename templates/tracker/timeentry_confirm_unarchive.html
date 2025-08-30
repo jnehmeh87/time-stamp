@@ -1,40 +1,53 @@
-{% extends "base.html" %}
-
-{% block title %}Confirm Bulk Unarchive{% endblock %}
-
+{% extends "base.html" %} {% block title %}Confirm Bulk Unarchive{% endblock %}
 {% block content %}
 <div class="card">
-    <div class="card-header">
-        <h1>Confirm Bulk Unarchive</h1>
-    </div>
-    <div class="card-body">
-        <p>Are you sure you want to unarchive the following time entries?</p>
-        
-        <ul class="list-group mb-4">
-            {% for entry in entries_to_process %}
-                <li class="list-group-item">{{ entry.title }} ({{ entry.start_time|date:"Y-m-d" }})</li>
-            {% empty %}
-                <li class="list-group-item">No entries selected.</li>
-            {% endfor %}
-        </ul>
+  <div class="card-header">
+    <h1>Confirm Bulk Unarchive</h1>
+  </div>
+  <div class="card-body">
+    <p>Are you sure you want to unarchive the following time entries?</p>
 
-        {% if entries_to_process %}
-        <form method="post" action="{% url 'tracker:entry_bulk_archive' %}">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="unarchive">
-            <input type="hidden" name="preserved_filters" value="{{ preserved_filters }}">
-            {% for entry in entries_to_process %}
-                <input type="hidden" name="selected_entries" value="{{ entry.pk }}">
-            {% endfor %}
-            
-            <div class="d-flex gap-2">
-                <button type="submit" class="btn btn-success">Yes, Unarchive Them</button>
-                <a href="{% url 'tracker:entry_list' %}?{{ preserved_filters }}" class="btn btn-secondary">Cancel</a>
-            </div>
-        </form>
-        {% else %}
-            <a href="{% url 'tracker:entry_list' %}?{{ preserved_filters }}" class="btn btn-primary">Back to List</a>
-        {% endif %}
-    </div>
+    <ul class="list-group mb-4">
+      {% for entry in entries_to_process %}
+      <li class="list-group-item">
+        {{ entry.title }} ({{ entry.start_time|date:"Y-m-d" }})
+      </li>
+      {% empty %}
+      <li class="list-group-item">No entries selected.</li>
+      {% endfor %}
+    </ul>
+
+    {% if entries_to_process %}
+    <form method="post" action="{% url 'tracker:entry_bulk_archive' %}">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="unarchive" />
+      <input
+        type="hidden"
+        name="preserved_filters"
+        value="{{ preserved_filters }}"
+      />
+      {% for entry in entries_to_process %}
+      <input type="hidden" name="selected_entries" value="{{ entry.pk }}" />
+      {% endfor %}
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-success">
+          Yes, Unarchive Them
+        </button>
+        <a
+          href="{% url 'tracker:entry_list' %}?{{ preserved_filters }}"
+          class="btn btn-secondary"
+          >Cancel</a
+        >
+      </div>
+    </form>
+    {% else %}
+    <a
+      href="{% url 'tracker:entry_list' %}?{{ preserved_filters }}"
+      class="btn btn-primary"
+      >Back to List</a
+    >
+    {% endif %}
+  </div>
 </div>
 {% endblock %}

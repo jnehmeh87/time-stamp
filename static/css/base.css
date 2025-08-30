@@ -1,19 +1,19 @@
 .toast-container {
-    position: fixed;
-    top: 70px; /* Position below the navbar */
-    right: 20px;
-    z-index: 1055; /* Ensure it's above other content */
+  position: fixed;
+  top: 70px; /* Position below the navbar */
+  right: 20px;
+  z-index: 1055; /* Ensure it's above other content */
 }
 .toast-custom {
-    opacity: 1;
-    transition: opacity 0.5s ease-in-out;
+  opacity: 1;
+  transition: opacity 0.5s ease-in-out;
 }
 .toast-custom.fade-out {
-    opacity: 0;
+  opacity: 0;
 }
 /* Hide toasts on mobile devices */
 @media (max-width: 767.98px) {
-    .toast-container {
-        display: none;
-    }
+  .toast-container {
+    display: none;
+  }
 }
