@@ -4,7 +4,10 @@ Django settings for time_stamp project.
 
 from pathlib import Path
 import os
-# import django_heroku
+from dotenv import load_dotenv
+
+# Add this line near the top of your settings.py file
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,6 +24,8 @@ ALLOWED_HOSTS = []
 # If running on Heroku or another production environment
 if not DEBUG:
     ALLOWED_HOSTS = ['timestamp-trackr-68fdb365e285.herokuapp.com']
+else:
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 
 # Application definition
@@ -32,7 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django.contrib.sites',
+    'django.contrib.sites', # Required by allauth
 
     # Third-party apps
     'allauth',
@@ -49,6 +54,7 @@ INSTALLED_APPS = [
     'tracker.apps.TrackerConfig',
 ]
 
+# Add this setting. It's required by django-allauth.
 SITE_ID = 1
 
 MIDDLEWARE = [
@@ -83,15 +89,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'time_stamp.wsgi.application'
-
-
-AUTHENTICATION_BACKENDS = [
-    # Needed to login by username in Django admin, regardless of `allauth`
-    'django.contrib.auth.backends.ModelBackend',
-
-    # `allauth` specific authentication methods, such as login by e-mail
-    'allauth.account.auth_backends.AuthenticationBackend',
-]
 
 
 # Database
@@ -155,6 +152,7 @@ ACCOUNT_LOGIN_METHODS = ['username', 'email']
 ACCOUNT_EMAIL_VERIFICATION = 'optional' # Can be 'mandatory' in production
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
+SOCIALACCOUNT_AUTO_SIGNUP = True
 
 # Session duration settings
 # Default session expires after 1 day (in seconds)
@@ -165,6 +163,11 @@ ACCOUNT_SESSION_COOKIE_AGE = 31536000  # 365 * 24 * 60 * 60
 ACCOUNT_SESSION_REMEMBER = None
 SOCIALACCOUNT_ADAPTER = 'tracker.adapters.CustomSocialAccountAdapter'
 
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         # For each OAuth based provider, either add a ``SocialApp``
@@ -172,8 +175,7 @@ SOCIALACCOUNT_PROVIDERS = {
         # credentials, or list them here:
         'APP': {
             'client_id': os.environ.get('GOOGLE_CLIENT_ID'),
-            'secret': os.environ.get('GOOGLE_SECRET_SECRET'),
-            'key': ''
+            'secret': os.environ.get('GOOGLE_SECRET_KEY'), # Corrected typo from GOOGLE_SECRET_SECRET
         },
         'SCOPE': [
             'profile',
@@ -189,10 +191,9 @@ SOCIALACCOUNT_PROVIDERS = {
             'client_id': os.environ.get('APPLE_CLIENT_ID'),
             # The Key ID of the private key used to sign the client secret.
             'secret': os.environ.get('APPLE_KEY_ID'),
-            # The private key found in your Apple developer account.
-            'key': os.environ.get('APPLE_PRIVATE_KEY'),
-            'certificate_key': os.environ.get('APPLE_PRIVATE_KEY'),
         },
+        # The private key found in your Apple developer account.
+        'certificate_key': os.environ.get('APPLE_PRIVATE_KEY'),
         'TEAM': os.environ.get('APPLE_TEAM_ID'),
         'SCOPE': ['name', 'email'],
         'EMAIL_AUTHENTICATION': True,

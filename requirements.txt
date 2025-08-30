@@ -3,7 +3,7 @@ Django
 gunicorn
 whitenoise
 dj-database-url
-psycopg2-binary==2.9.9
+psycopg2-binary
 python-dotenv
 
 # Authentication
