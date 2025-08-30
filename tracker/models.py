@@ -15,8 +15,8 @@ CATEGORY_CHOICES = [
 class Profile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     country = CountryField(blank=True, null=True)
-    address = models.CharField(max_length=255, blank=True)
-    phone_number = models.CharField(max_length=20, blank=True)
+    address = models.CharField(max_length=255, blank=True, default='')
+    phone_number = models.CharField(max_length=20, blank=True, default='')
 
     def __str__(self):
         return f'{self.user.username} Profile'
