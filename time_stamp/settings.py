@@ -5,7 +5,6 @@ Django settings for time_stamp project.
 from pathlib import Path
 import os
 from dotenv import load_dotenv
-import dj_database_url
 
 # Add this line near the top of your settings.py file
 load_dotenv()
@@ -105,10 +104,6 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-
-# Add this block to use Postgres on Heroku
-if 'DATABASE_URL' in os.environ:
-    DATABASES['default'] = dj_database_url.config(conn_max_age=600, ssl_require=True)
 
 
 # Password validation
