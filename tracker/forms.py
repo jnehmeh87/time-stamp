@@ -11,12 +11,7 @@ User = get_user_model()
 class MultiImageInput(forms.ClearableFileInput):
     allow_multiple_selected = True
 
-class TimeEntryUpdateForm(forms.ModelForm):
-    images = forms.FileField(
-        widget=MultiImageInput(attrs={'class': 'form-control'}), 
-        required=False, 
-        label="Upload New Images"
-    )
+class TimeEntryManualForm(forms.ModelForm):
     pause_hours = forms.IntegerField(
         label="Hours", min_value=0, required=False, 
         widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'HH'})
@@ -68,36 +63,45 @@ class TimeEntryUpdateForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
+        project = cleaned_data.get('project')
+
+        # If a project is selected, its category should be the source of truth.
+        # This ensures data consistency and centralizes the logic in the form.
+        if project:
+            cleaned_data['category'] = project.category
+
         hours = cleaned_data.get('pause_hours') or 0
         minutes = cleaned_data.get('pause_minutes') or 0
         seconds = cleaned_data.get('pause_seconds') or 0
         
         # Combine into a timedelta and add to cleaned_data
         cleaned_data['paused_duration'] = timedelta(hours=hours, minutes=minutes, seconds=seconds)
+
+        start_time = cleaned_data.get('start_time')
+        end_time = cleaned_data.get('end_time')
+
+        # Add validation for time and duration logic
+        if start_time and end_time:
+            if start_time >= end_time:
+                raise ValidationError("End time must be after start time.")
+            
+            duration = end_time - start_time
+            if cleaned_data.get('paused_duration') > duration:
+                raise ValidationError("Paused duration cannot be greater than the total entry duration.")
+
         return cleaned_data
 
     def save(self, commit=True):
-        # Set the model's paused_duration from our cleaned data
-        self.instance.paused_duration = self.cleaned_data['paused_duration']
+        # Get the instance but don't save it to the database yet.
+        instance = super().save(commit=False)
         
-        # The view will handle saving the images.
-        entry = super().save(commit=commit)
+        # Set the paused_duration from the cleaned data, providing a default.
+        instance.paused_duration = self.cleaned_data.get('paused_duration', timedelta(0))
         
-        return entry
-
-class TimeEntryForm(forms.ModelForm):
-    class Meta:
-        model = TimeEntry
-        fields = ['title', 'project', 'category', 'start_time', 'end_time', 'description', 'notes']
-        widgets = {
-            'start_time': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
-            'end_time': forms.DateTimeInput(attrs={'type': 'datetime-local', 'class': 'form-control'}),
-            'project': forms.Select(attrs={'class': 'form-select'}),
-            'category': forms.Select(attrs={'class': 'form-select'}),
-            'title': forms.TextInput(attrs={'class': 'form-control'}),
-            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-        }
+        if commit:
+            instance.save()
+            
+        return instance
 
 class ProjectForm(forms.ModelForm):
     class Meta:

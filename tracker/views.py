@@ -3,20 +3,20 @@ from django.http import HttpResponse
 from django.views import View
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required 
 from django.db import transaction
 from django.utils import timezone
 from django.urls import reverse_lazy, reverse
 from urllib.parse import urlencode
 from .models import TimeEntry, Project, TimeEntryImage
-from .forms import TimeEntryForm, ProjectForm, TimeEntryFilterForm, ReportForm, TimeEntryUpdateForm, UserUpdateForm, ProfileUpdateForm
+from .forms import ProjectForm, TimeEntryFilterForm, ReportForm, TimeEntryManualForm, UserUpdateForm, ProfileUpdateForm
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.db.models import Sum, F, ExpressionWrapper, DurationField, Min, Max, Count, Q
 from django.db.models.functions import TruncDay
 from django.http import JsonResponse
 from datetime import timedelta, date, datetime, time
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from collections import defaultdict
 import csv
 from googletrans import Translator, LANGUAGES
@@ -234,7 +234,7 @@ class TimeEntryListView(LoginRequiredMixin, ListView):
 
 class TimeEntryCreateView(LoginRequiredMixin, CreateView):
     model = TimeEntry
-    form_class = TimeEntryUpdateForm
+    form_class = TimeEntryManualForm
     template_name = 'tracker/timeentry_create_form.html' # Use the new create template
     success_url = reverse_lazy('tracker:entry_list')
 
@@ -259,7 +259,7 @@ class TimeEntryCreateView(LoginRequiredMixin, CreateView):
 
 class TimeEntryUpdateView(LoginRequiredMixin, UpdateView):
     model = TimeEntry
-    form_class = TimeEntryUpdateForm
+    form_class = TimeEntryManualForm
     template_name = 'tracker/timeentry_update_form.html' # Use the new update template
     success_url = reverse_lazy('tracker:entry_list')
 
@@ -588,7 +588,7 @@ class AnalyticsDashboardView(LoginRequiredMixin, View):
         
         # Apply category filter to the main queryset if provided
         if category and category != 'all':
-            time_entries_qs = time_entries_qs.filter(project__category=category)
+            time_entries_qs = time_entries_qs.filter(category=category)
 
         # --- 4. Line Chart: Activity by Project over selected period ---
         # (This logic will now run with the filtered queryset)
@@ -963,17 +963,19 @@ def daily_earnings_tracker(request):
             SOCIAL_FEES_RATE = Decimal('0.2897')
             MUNICIPAL_TAX_RATE = Decimal('0.32') # Using a common average
 
-            end_date_inclusive = end_date + timedelta(days=1)
+            # Make datetimes timezone-aware to prevent warnings
+            start_dt = timezone.make_aware(datetime.combine(start_date, time.min))
+            end_dt = timezone.make_aware(datetime.combine(end_date, time.max))
+
             entries = TimeEntry.objects.filter(
                 project=project,
-                start_time__gte=datetime.combine(start_date, time.min),
-                end_time__lt=datetime.combine(end_date, time.max), # Corrected to include full end day
+                start_time__gte=start_dt,
+                end_time__lt=end_dt,
                 user=request.user
             ).order_by('start_time')
 
             hourly_rate = Decimal(project.hourly_rate)
 
-            # Add worked_duration to each entry for the template
             total_worked_duration = timedelta(0)
             for entry in entries:
                 if entry.end_time and entry.start_time:
@@ -986,7 +988,8 @@ def daily_earnings_tracker(request):
 
             # Summary Calculations based on Swedish Sole Trader model
             total_hours = Decimal(total_worked_duration.total_seconds()) / Decimal(3600)
-            gross_pay = total_hours * hourly_rate # This is the revenue
+            # Round to 2 decimal places for currency
+            gross_pay = (total_hours * hourly_rate).quantize(Decimal('0.01'))
 
             social_fees_amount = gross_pay * SOCIAL_FEES_RATE
             taxable_income = gross_pay - social_fees_amount
@@ -1082,7 +1085,7 @@ def income_calculator(request):
                 'net_salary': net_salary,
                 'state_tax_threshold': STATE_TAX_THRESHOLD,
             })
-        except (ValueError, TypeError):
+        except (ValueError, TypeError, InvalidOperation):
             messages.error(request, "Invalid input. Please enter valid numbers.")
 
     return render(request, 'tracker/income_calculator.html', context)
@@ -1103,97 +1106,6 @@ def ajax_get_project_dates(request):
                 'end_date': dates['end_date'].strftime('%Y-%m-%d'),
             })
     return JsonResponse({'success': False})
-
-# --- Analytics View ---
-
-def get_analytics_data(user, period='30d', category=None):
-    # This function should contain your logic to calculate all analytics data.
-    # The following is a simplified example.
-    
-    # Determine date range from period
-    now = timezone.now()
-    if period == '7d':
-        start_date = now - timedelta(days=7)
-    elif period == '15d':
-        start_date = now - timedelta(days=15)
-    # ... other periods
-    else: # default to 30d
-        start_date = now - timedelta(days=30)
-
-    # Base queryset
-    time_entries = TimeEntry.objects.filter(user=user, start_time__gte=start_date)
-    
-    # Filter by category if provided and not 'all'
-    if category and category != 'all':
-        time_entries = time_entries.filter(project__category=category)
-
-    # --- Activity Chart Data ---
-    activity_chart_labels = []
-    # Generate labels for the period (e.g., last 30 days)
-    current_date = start_date.date()
-    while current_date <= now.date():
-        activity_chart_labels.append(current_date.strftime('%Y-%m-%d'))
-        current_date += timedelta(days=1)
-
-    project_activity = defaultdict(lambda: defaultdict(float))
-    for entry in time_entries:
-        if entry.end_time:
-            date_str = entry.start_time.strftime('%Y-%m-%d')
-            duration_hours = entry.get_duration().total_seconds() / 3600
-            project_activity[entry.project.name][date_str] += duration_hours
-
-    activity_chart_datasets = []
-    for project_name, date_hours in project_activity.items():
-        data = [date_hours.get(date, 0) for date in activity_chart_labels]
-        activity_chart_datasets.append({
-            'label': project_name,
-            'data': data,
-        })
-
-    # --- Other Chart Data (placeholders) ---
-    # You would also calculate your other chart data here
-    work_duration = timedelta(0)
-    personal_duration = timedelta(0)
-    total_earnings = 0
-    category_chart_labels = []
-    category_chart_data = []
-    earnings_chart_labels = []
-    earnings_chart_data = []
-
-    return {
-        'activity_chart_labels': activity_chart_labels,
-        'activity_chart_datasets': activity_chart_datasets,
-        'work_duration': work_duration,
-        'personal_duration': personal_duration,
-        'total_earnings': total_earnings,
-        'category_chart_labels': category_chart_labels,
-        'category_chart_data': category_chart_data,
-        'earnings_chart_labels': earnings_chart_labels,
-        'earnings_chart_data': earnings_chart_data,
-        'active_period': period,
-        'active_category': category,
-    }
-
-
-@login_required
-def analytics_view(request):
-    period = request.GET.get('period', '30d')
-    category = request.GET.get('category', 'all')
-
-    # Check if it's an AJAX request asking for new chart data
-    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        # For AJAX, we only need the activity chart data
-        data = get_analytics_data(request.user, period, category)
-        return JsonResponse({
-            'activity_chart_labels': data['activity_chart_labels'],
-            'activity_chart_datasets': data['activity_chart_datasets'],
-        })
-
-    # For a normal page load, get all data and render the template
-    context = get_analytics_data(request.user, period, category)
-    return render(request, 'tracker/analytics.html', context)
-    context = get_analytics_data(request.user, period, category)
-    return render(request, 'tracker/analytics.html', context)
 
 @login_required
 def profile_view(request):
@@ -1222,263 +1134,5 @@ def terminate_account_confirm(request):
         logout(request)
         user.delete()
         messages.success(request, 'Your account has been successfully terminated.')
-        return redirect('tracker:entry_list')
+        return redirect('tracker:home')
     return render(request, 'tracker/terminate_account_confirm.html')
-    # Get the English name of the target language and then translate it.
-    target_language_english_name = LANGUAGES.get(target_language, target_language).capitalize()
-    try:
-        translated_language_name = translator.translate(target_language_english_name, dest=target_language).text
-    except (TypeError, AttributeError):
-        # If translation of the language name fails, fall back to the English name
-        translated_language_name = target_language_english_name
-
-    # Translate static text for the template
-    trans_context = {
-        't_translated_report': translator.translate('Translated Report', dest=target_language).text,
-        't_project': translator.translate('Project', dest=target_language).text,
-        't_date_range': translator.translate('Date Range', dest=target_language).text,
-        't_language': translator.translate('Language', dest=target_language).text,
-        't_all_projects': translator.translate('All Projects', dest=target_language).text,
-        't_details': translator.translate('Details', dest=target_language).text,
-        't_start_time': translator.translate('Start Time', dest=target_language).text,
-        't_end_time': translator.translate('End Time', dest=target_language).text,
-        't_duration': translator.translate('Duration', dest=target_language).text,
-        't_description': translator.translate('Description', dest=target_language).text,
-        't_notes': translator.translate('Notes', dest=target_language).text,
-        't_entry': translator.translate('Entry', dest=target_language).text,
-        't_no_entries': translator.translate('No entries found for this period.', dest=target_language).text,
-    }
-
-    translated_entries = []
-    for entry in entries:
-        translated_title = translator.translate(entry.title, dest=target_language).text if entry.title else ""
-        translated_description = translator.translate(entry.description, dest=target_language).text if entry.description else ""
-        translated_notes = translator.translate(entry.notes, dest=target_language).text if entry.notes else ""
-
-        # Pre-format duration for PDF
-        duration_str = ""
-        if entry.duration:
-            total_seconds = int(entry.duration.total_seconds())
-            hours, remainder = divmod(total_seconds, 3600)
-            minutes, seconds = divmod(remainder, 60)
-            duration_str = f'{hours:02}:{minutes:02}:{seconds:02}'
-
-        translated_entries.append({
-            'original': entry,
-            'title': translated_title,
-            'description': translated_description,
-            'notes': translated_notes,
-            'formatted_duration': duration_str,
-        })
-    
-    project = Project.objects.filter(pk=project_id).first() if project_id else None
-    
-    context = {
-        'entries': translated_entries,
-        'start_date': start_date,
-        'end_date': end_date,
-        'project': project,
-        'target_language': translated_language_name,
-        'request': request,
-        'trans': trans_context,
-        'is_rtl': is_rtl,
-    }
-
-    if export_format == 'pdf':
-        pdf = render_to_pdf('tracker/report_pdf.html', context)
-        if pdf:
-            response = HttpResponse(pdf, content_type='application/pdf')
-            filename = f"translated_report_{start_date}_to_{end_date}.pdf"
-            response['Content-Disposition'] = f'attachment; filename="{filename}"'
-            return response
-
-    if export_format == 'csv':
-        response = HttpResponse(content_type='text/csv')
-        response['Content-Disposition'] = f'attachment; filename="translated_report_{start_date}_to_{end_date}.csv"'
-        writer = csv.writer(response)
-        writer.writerow([
-            'Original Title', 'Translated Title', 'Original Description', 'Translated Description',
-            'Original Notes', 'Translated Notes', 'Project', 'Start Time', 'Duration (HH:MM:SS)'
-        ])
-        for item in translated_entries:
-            entry = item['original']
-            writer.writerow([
-                entry.title, item['title'], entry.description, entry['description'],
-                entry.notes, item['notes'], entry.project.name if entry.project else '-',
-                entry.start_time.strftime('%Y-%m-%d %H:%M:%S'), str(entry.duration)
-            ])
-        return response
-
-    return render(request, 'tracker/report_translated.html', context)
-
-def daily_earnings_tracker(request):
-    # If the essential params are not in the request, redirect with defaults.
-    # This handles both initial page load and category changes from the frontend.
-    if 'project' not in request.GET or not request.GET.get('project'):
-        today = date.today()
-        
-        # Use category from GET if present (from category dropdown), otherwise default to 'work'
-        default_category = request.GET.get('category', 'work')
-        
-        latest_entry = TimeEntry.objects.filter(
-            user=request.user, 
-            project__category=default_category, 
-            project__isnull=False
-        ).order_by('-start_time').first()
-        
-        default_project_id = latest_entry.project.id if latest_entry else ''
-
-        params = {
-            'category': default_category,
-            'project': default_project_id,
-            'start_date': today.replace(day=1).strftime('%Y-%m-%d'),
-            'end_date': today.strftime('%Y-%m-%d'),
-        }
-        query_string = urlencode({k: v for k, v in params.items() if v})
-        return redirect(f"{reverse('tracker:daily_earnings_tracker')}?{query_string}")
-
-    # If we are here, we have GET params (either from defaults or user submission)
-    form = ReportForm(request.GET, user=request.user)
-    context = {'form': form}
-
-    if form.is_valid():
-        project = form.cleaned_data.get('project')
-        start_date = form.cleaned_data.get('start_date')
-        end_date = form.cleaned_data.get('end_date')
-
-        if project and project.hourly_rate and start_date and end_date:
-            # --- Swedish Tax Constants ---
-            SOCIAL_FEES_RATE = Decimal('0.2897')
-            MUNICIPAL_TAX_RATE = Decimal('0.32') # Using a common average
-
-            end_date_inclusive = end_date + timedelta(days=1)
-            entries = TimeEntry.objects.filter(
-                project=project,
-                start_time__gte=start_date,
-                end_time__lt=end_date_inclusive,
-                user=request.user
-            ).order_by('start_time')
-
-            hourly_rate = Decimal(project.hourly_rate)
-
-            # Add worked_duration to each entry for the template
-            total_worked_duration = timedelta(0)
-            for entry in entries:
-                if entry.end_time and entry.start_time:
-                    entry.worked_duration = (entry.end_time - entry.start_time) - entry.paused_duration
-                    total_worked_duration += entry.worked_duration
-                else:
-                    entry.worked_duration = timedelta(0)
-
-            # Summary Calculations based on Swedish Sole Trader model
-            total_hours = Decimal(total_worked_duration.total_seconds()) / Decimal(3600)
-            gross_pay = total_hours * hourly_rate # This is the revenue
-
-            social_fees_amount = gross_pay * SOCIAL_FEES_RATE
-            taxable_income = gross_pay - social_fees_amount
-            income_tax_amount = taxable_income * MUNICIPAL_TAX_RATE
-            net_pay = taxable_income - income_tax_amount
-
-            # Data for chart
-            daily_earnings = defaultdict(Decimal)
-            for entry in entries:
-                date_key = entry.start_time.strftime('%Y-%m-%d')
-                worked_hours_entry = Decimal(entry.worked_duration.total_seconds()) / Decimal(3600)
-                daily_earnings[date_key] += worked_hours_entry * hourly_rate
-            
-            chart_labels = sorted(daily_earnings.keys())
-            chart_data = [daily_earnings[label] for label in chart_labels]
-
-            context.update({
-                'project': project,
-                'entries': entries,
-                'hourly_rate': hourly_rate,
-                'chart_labels': chart_labels,
-                'chart_data': chart_data,
-                'total_hours': total_hours,
-                'gross_pay': gross_pay,
-                'social_fees_amount': social_fees_amount,
-                'income_tax_amount': income_tax_amount,
-                'net_pay': net_pay,
-            })
-
-    return render(request, 'tracker/daily_earnings_tracker.html', context)
-
-def income_calculator(request):
-    # --- Part 1: Swedish Freelance Rate Calculator ---
-    context = {}
-    desired_salary_str = request.GET.get('desired_salary')
-
-    if desired_salary_str:
-        try:
-            # --- Input Data ---
-            desired_salary = Decimal(desired_salary_str)
-            overhead_costs = Decimal(request.GET.get('overhead_costs', '0'))
-            profit_margin_perc = Decimal(request.GET.get('profit_margin', '0'))
-            billable_hours = Decimal(request.GET.get('billable_hours', '1')) # Avoid division by zero
-            municipal_tax_perc = Decimal(request.GET.get('municipal_tax', '0'))
-
-            # --- Constants for Swedish calculations ---
-            SOCIAL_FEES_RATE = Decimal('0.2897')
-            VACATION_PAY_RATE = Decimal('0.12')
-            PENSION_RATE = Decimal('0.045')
-            SICK_LEAVE_BUFFER_RATE = Decimal('0.05')
-            STATE_TAX_THRESHOLD = Decimal('598500') # For 2023/2024, annual income
-            
-            # --- Calculations ---
-            social_fees = desired_salary * SOCIAL_FEES_RATE
-            vacation_pay = desired_salary * VACATION_PAY_RATE
-            pension_savings = desired_salary * PENSION_RATE
-            sick_leave_buffer = desired_salary * SICK_LEAVE_BUFFER_RATE
-
-            total_monthly_cost = (desired_salary + social_fees + vacation_pay + 
-                                  pension_savings + sick_leave_buffer + overhead_costs)
-            
-            profit_amount = total_monthly_cost * (profit_margin_perc / 100)
-            total_to_invoice = total_monthly_cost + profit_amount
-            
-            hourly_rate_to_charge = total_to_invoice / billable_hours if billable_hours > 0 else 0
-
-            # Personal take-home pay calculation
-            total_tax_amount = desired_salary * (municipal_tax_perc / 100)
-            # Note: This is a simplification. Real tax is more complex.
-            net_salary = desired_salary - total_tax_amount
-
-            context.update({
-                'hourly_rate_to_charge': hourly_rate_to_charge,
-                'desired_salary': desired_salary,
-                'overhead_costs': overhead_costs,
-                'profit_margin': profit_margin_perc,
-                'social_fees': social_fees,
-                'vacation_pay': vacation_pay,
-                'pension_savings': pension_savings,
-                'sick_leave_buffer': sick_leave_buffer,
-                'total_monthly_cost': total_monthly_cost,
-                'profit_amount': profit_amount,
-                'total_to_invoice': total_to_invoice,
-                'municipal_tax': municipal_tax_perc,
-                'total_tax_amount': total_tax_amount,
-                'net_salary': net_salary,
-                'state_tax_threshold': STATE_TAX_THRESHOLD,
-            })
-        except (ValueError, TypeError):
-            messages.error(request, "Invalid input. Please enter valid numbers.")
-
-    return render(request, 'tracker/income_calculator.html', context)
-
-
-def ajax_get_project_dates(request):
-    project_id = request.GET.get('project_id')
-    if project_id:
-        project = get_object_or_404(Project, pk=project_id, user=request.user)
-        dates = TimeEntry.objects.filter(project=project, user=request.user).aggregate(
-            start_date=Min('start_time__date'),
-            end_date=Max('end_time__date')
-        )
-        if dates['start_date'] and dates['end_date']:
-            return JsonResponse({
-                'success': True,
-                'start_date': dates['start_date'].strftime('%Y-%m-%d'),
-                'end_date': dates['end_date'].strftime('%Y-%m-%d'),
-            })
-    return JsonResponse({'success': False})

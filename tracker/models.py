@@ -74,29 +74,16 @@ class TimeEntry(models.Model):
         return f"{self.title} ({self.user.username})"
 
     def save(self, *args, **kwargs):
-        if self.project:
-            self.category = self.project.category
+        # The logic to set category based on project has been moved to the
+        # TimeEntryUpdateForm's clean() method to centralize validation.
         super().save(*args, **kwargs)
-
-class TimeEntryImage(models.Model):
-    time_entry = models.ForeignKey(TimeEntry, related_name='images', on_delete=models.CASCADE)
-    image = models.ImageField(upload_to='time_entry_images/')
-
-    def __str__(self):
-        return f"Image for {self.time_entry.title}"
-        return f"Image for {self.time_entry.title}"
-        m, s = divmod(rem, 60)
-        return f"{h:02d}:{m:02d}:{s:02d}"
 
 class TimeEntryImage(models.Model):
     time_entry = models.ForeignKey(TimeEntry, on_delete=models.CASCADE, related_name='images')
     image = models.ImageField(upload_to='time_entry_images/')
 
     class Meta:
-        indexes = [
-            models.Index(fields=['time_entry']),
-        ]
+        indexes = [models.Index(fields=['time_entry'])]
 
     def __str__(self):
-        return f"Image for {self.time_entry.title}"
         return f"Image for {self.time_entry.title}"
