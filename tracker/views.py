@@ -19,6 +19,7 @@ from datetime import timedelta, date, datetime, time
 from decimal import Decimal, InvalidOperation
 from collections import defaultdict
 import csv
+from allauth.account.utils import get_next_redirect_url
 from allauth.account.views import LoginView as AllauthLoginView
 from googletrans import Translator, LANGUAGES
 from .utils import render_to_pdf, format_duration_hms
@@ -122,16 +123,22 @@ class CustomLoginView(AllauthLoginView):
     Custom login view to redirect staff members to the admin panel
     and regular users to the standard home page.
     """
-    def get_success_url(self):
-        # If the user is a staff member, redirect to the admin index.
-        # The `get_redirect_url` method correctly handles the `?next=` parameter,
-        # so if they were trying to access a specific admin page, they'll go there.
-        if self.request.user.is_staff:
-            return self.get_redirect_url() or reverse('admin:index')
-        
-        # For all other users, fall back to the default behavior, which
-        # respects the LOGIN_REDIRECT_URL setting.
-        return super().get_success_url()
+    def form_valid(self, form):
+        """
+        This method is called upon successful login.
+        We override it to customize the redirect behavior.
+        """
+        # The authenticated user object is available on the form.
+        user = form.user
+
+        if user.is_staff:
+            # For staff users, determine the redirect URL.
+            # It prioritizes the `?next=` parameter, falling back to the admin index.
+            redirect_to = get_next_redirect_url(self.request) or reverse('admin:index')
+            return form.login(self.request, redirect_url=redirect_to)
+
+        # For all other users, use the default behavior from the parent class.
+        return super().form_valid(form)
 
 
 # --- Time Entry Views ---
