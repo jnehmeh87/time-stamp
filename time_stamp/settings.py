@@ -18,16 +18,13 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-default-key-for-development')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True') == 'True'
+# Set DEBUG to False in production by default.
+# It will only be True if the DEBUG environment variable is explicitly set to 'True'.
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = []
-
-# If running on Heroku or another production environment
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 if not DEBUG:
-    ALLOWED_HOSTS = ['timestamp-trackr-68fdb365e285.herokuapp.com']
-else:
-    ALLOWED_HOSTS = ['localhost', '127.0.0.1']
-
+    ALLOWED_HOSTS.append('timestamp-trackr-68fdb365e285.herokuapp.com')
 
 # Application definition
 
@@ -177,37 +174,32 @@ AUTHENTICATION_BACKENDS = [
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
-SOCIALACCOUNT_PROVIDERS = {
-    'google': {
-        # For each OAuth based provider, either add a ``SocialApp``
-        # (``socialaccount`` app) containing the required client
-        # credentials, or list them here:
+SOCIALACCOUNT_PROVIDERS = {}
+
+# Conditionally enable Google provider if credentials are set
+if os.environ.get('GOOGLE_CLIENT_ID') and os.environ.get('GOOGLE_SECRET_KEY'):
+    SOCIALACCOUNT_PROVIDERS['google'] = {
         'APP': {
             'client_id': os.environ.get('GOOGLE_CLIENT_ID'),
-            'secret': os.environ.get('GOOGLE_SECRET_KEY'), # Corrected typo from GOOGLE_SECRET_SECRET
+            'secret': os.environ.get('GOOGLE_SECRET_KEY'),
         },
-        'SCOPE': [
-            'profile',
-            'email',
-        ],
-        'AUTH_PARAMS': {
-            'access_type': 'online',
-        }
-    },
-    'apple': {
+        'SCOPE': ['profile', 'email'],
+        'AUTH_PARAMS': {'access_type': 'online'}
+    }
+
+# Conditionally enable Apple provider if all credentials are set
+# This prevents crashes if environment variables are missing.
+if all(os.environ.get(key) for key in ['APPLE_CLIENT_ID', 'APPLE_KEY_ID', 'APPLE_PRIVATE_KEY', 'APPLE_TEAM_ID']):
+    SOCIALACCOUNT_PROVIDERS['apple'] = {
         'APP': {
-            # Your service id.
             'client_id': os.environ.get('APPLE_CLIENT_ID'),
-            # The Key ID of the private key used to sign the client secret.
             'secret': os.environ.get('APPLE_KEY_ID'),
         },
-        # The private key found in your Apple developer account.
         'certificate_key': os.environ.get('APPLE_PRIVATE_KEY'),
         'TEAM': os.environ.get('APPLE_TEAM_ID'),
         'SCOPE': ['name', 'email'],
         'EMAIL_AUTHENTICATION': True,
     }
-}
 
 ACCOUNT_FORMS = {
     'signup': 'tracker.forms.CustomSignupForm',
