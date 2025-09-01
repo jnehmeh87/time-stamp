@@ -41,8 +41,6 @@ INSTALLED_APPS = [
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
-    'allauth.socialaccount.providers.google',
-    'allauth.socialaccount.providers.apple',
     'widget_tweaks',
     'django_countries',
     'crispy_forms',
@@ -178,6 +176,7 @@ SOCIALACCOUNT_PROVIDERS = {}
 
 # Conditionally enable Google provider if credentials are set
 if os.environ.get('GOOGLE_CLIENT_ID') and os.environ.get('GOOGLE_SECRET_KEY'):
+    INSTALLED_APPS.append('allauth.socialaccount.providers.google')
     SOCIALACCOUNT_PROVIDERS['google'] = {
         'APP': {
             'client_id': os.environ.get('GOOGLE_CLIENT_ID'),
@@ -190,6 +189,7 @@ if os.environ.get('GOOGLE_CLIENT_ID') and os.environ.get('GOOGLE_SECRET_KEY'):
 # Conditionally enable Apple provider if all credentials are set
 # This prevents crashes if environment variables are missing.
 if all(os.environ.get(key) for key in ['APPLE_CLIENT_ID', 'APPLE_KEY_ID', 'APPLE_PRIVATE_KEY', 'APPLE_TEAM_ID']):
+    INSTALLED_APPS.append('allauth.socialaccount.providers.apple')
     SOCIALACCOUNT_PROVIDERS['apple'] = {
         'APP': {
             'client_id': os.environ.get('APPLE_CLIENT_ID'),
