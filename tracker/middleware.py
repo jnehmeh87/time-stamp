@@ -29,7 +29,10 @@ class ClearSocialSessionMiddleware:
         is accessing the admin panel. This prevents a bug where an admin trying
         to log in would be redirected to a pending social signup flow.
         """
-        if request.path.startswith(reverse('admin:index')):
+        # Use a hardcoded path for robustness. The reverse() call can be problematic
+        # during application startup or under certain server configurations.
+        # The admin path is stable and unlikely to change.
+        if request.path.startswith('/admin/'):
             if 'socialaccount_state' in request.session:
                 del request.session['socialaccount_state']
             if 'sociallogin' in request.session:
