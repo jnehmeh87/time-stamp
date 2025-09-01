@@ -157,8 +157,8 @@ else:
 # Allauth settings
 ACCOUNT_LOGIN_METHODS = ['username', 'email']
 ACCOUNT_EMAIL_VERIFICATION = 'optional' # Can be 'mandatory' in production
-LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/'
+LOGIN_REDIRECT_URL = 'tracker:home'
+LOGOUT_REDIRECT_URL = 'tracker:home'
 SOCIALACCOUNT_AUTO_SIGNUP = True
 
 # Session duration settings

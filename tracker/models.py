@@ -24,12 +24,13 @@ class Profile(models.Model):
 @receiver(post_save, sender=settings.AUTH_USER_MODEL)
 def create_or_update_user_profile(sender, instance, created, **kwargs):
     """
-    Create a profile for new users, or save the profile for existing users.
+    Ensures a profile exists for every user.
+    This signal creates a profile for a new user, and also ensures that
+    any existing user who might be missing a profile (e.g., created before
+    this feature was added) gets one automatically.
     """
-    if created:
-        Profile.objects.create(user=instance)
-    # Ensure the profile is saved when the user is saved.
-    instance.profile.save()
+    # Use get_or_create to safely create a profile if it doesn't exist.
+    Profile.objects.get_or_create(user=instance)
 
 
 class Project(models.Model):
