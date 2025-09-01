@@ -19,6 +19,7 @@ from datetime import timedelta, date, datetime, time
 from decimal import Decimal, InvalidOperation
 from collections import defaultdict
 import csv
+from allauth.account.views import LoginView as AllauthLoginView
 from googletrans import Translator, LANGUAGES
 from .utils import render_to_pdf, format_duration_hms
 
@@ -115,6 +116,23 @@ def resume_timer(request):
                 active_entry.last_pause_time = None
                 active_entry.save()
     return redirect('tracker:home')
+
+class CustomLoginView(AllauthLoginView):
+    """
+    Custom login view to redirect staff members to the admin panel
+    and regular users to the standard home page.
+    """
+    def get_success_url(self):
+        # If the user is a staff member, redirect to the admin index.
+        # The `get_redirect_url` method correctly handles the `?next=` parameter,
+        # so if they were trying to access a specific admin page, they'll go there.
+        if self.request.user.is_staff:
+            return self.get_redirect_url() or reverse('admin:index')
+        
+        # For all other users, fall back to the default behavior, which
+        # respects the LOGIN_REDIRECT_URL setting.
+        return super().get_success_url()
+
 
 # --- Time Entry Views ---
 
