@@ -4,6 +4,7 @@ Django settings for time_stamp project.
 
 from pathlib import Path
 import os
+import dj_database_url
 from dotenv import load_dotenv
 
 # Add this line near the top of your settings.py file
@@ -94,13 +95,16 @@ WSGI_APPLICATION = 'time_stamp.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
+# Default to SQLite for local development
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-
+# If DATABASE_URL is set in the environment, use it for production (e.g., on Heroku)
+if 'DATABASE_URL' in os.environ:
+    DATABASES['default'] = dj_database_url.config(conn_max_age=600, ssl_require=not DEBUG)
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -128,6 +132,9 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+if not DEBUG:
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
@@ -158,6 +165,8 @@ SOCIALACCOUNT_AUTO_SIGNUP = True
 # Default session expires after 1 day (in seconds)
 SESSION_COOKIE_AGE = 86400  # 24 * 60 * 60
 # When "Remember Me" is checked, session lasts for 1 year
+# Update the session cookie on every request to prevent timeouts during active use.
+SESSION_SAVE_EVERY_REQUEST = True
 ACCOUNT_SESSION_COOKIE_AGE = 31536000  # 365 * 24 * 60 * 60
 # Ensure the "Remember Me" checkbox is displayed
 ACCOUNT_SESSION_REMEMBER = None
