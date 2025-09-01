@@ -29,14 +29,14 @@ class HomePageView(View):
         if request.user.is_authenticated:
             active_entry = TimeEntry.objects.filter(user=request.user, end_time__isnull=True).first()
             projects = Project.objects.filter(user=request.user)
-            recent_entries = TimeEntry.objects.filter(
+            recent_entries = TimeEntry.objects.filter( 
                 user=request.user, 
                 end_time__isnull=False
-            ).order_by('-start_time')[:10]
+            ).select_related('project').order_by('-start_time')[:10]
 
             # Find the most recent project for each category
-            latest_work_entry = TimeEntry.objects.filter(user=request.user, category='work', project__isnull=False).order_by('-start_time').first()
-            latest_personal_entry = TimeEntry.objects.filter(user=request.user, category='personal', project__isnull=False).order_by('-start_time').first()
+            latest_work_entry = TimeEntry.objects.filter(user=request.user, category='work', project__isnull=False).select_related('project').order_by('-start_time').first()
+            latest_personal_entry = TimeEntry.objects.filter(user=request.user, category='personal', project__isnull=False).select_related('project').order_by('-start_time').first()
 
             context = {
                 'active_entry': active_entry,
@@ -225,8 +225,8 @@ class TimeEntryListView(LoginRequiredMixin, ListView):
 
         # Data for dynamic project dropdown
         context['all_projects'] = Project.objects.filter(user=self.request.user)
-        latest_work_entry = TimeEntry.objects.filter(user=self.request.user, category='work', project__isnull=False).order_by('-start_time').first()
-        latest_personal_entry = TimeEntry.objects.filter(user=self.request.user, category='personal', project__isnull=False).order_by('-start_time').first()
+        latest_work_entry = TimeEntry.objects.filter(user=self.request.user, category='work', project__isnull=False).select_related('project').order_by('-start_time').first()
+        latest_personal_entry = TimeEntry.objects.filter(user=self.request.user, category='personal', project__isnull=False).select_related('project').order_by('-start_time').first()
         context['latest_work_project_id'] = latest_work_entry.project.id if latest_work_entry else None
         context['latest_personal_project_id'] = latest_personal_entry.project.id if latest_personal_entry else None
 
@@ -296,8 +296,13 @@ class TimeEntryUpdateView(LoginRequiredMixin, UpdateView):
 
 class TimeEntryDeleteView(LoginRequiredMixin, DeleteView):
     model = TimeEntry
-    template_name = 'tracker/timeentry_confirm_delete_single.html'
+    template_name = 'tracker/timeentry_confirm_delete.html'
     success_url = reverse_lazy('tracker:entry_list')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['entries_to_delete'] = [self.object]
+        return context
 
     def get_queryset(self):
         return super().get_queryset().filter(user=self.request.user)
@@ -373,10 +378,11 @@ def time_entry_bulk_archive(request):
 
 @login_required
 def time_entry_toggle_archive(request, pk):
-    entry = get_object_or_404(TimeEntry, pk=pk, user=request.user)
-    entry.is_archived = not entry.is_archived
-    entry.save()
-    messages.success(request, f"Entry '{entry.title}' has been {'archived' if entry.is_archived else 'unarchived'}.")
+    if request.method == 'POST':
+        entry = get_object_or_404(TimeEntry, pk=pk, user=request.user)
+        entry.is_archived = not entry.is_archived
+        entry.save()
+        messages.success(request, f"Entry '{entry.title}' has been {'archived' if entry.is_archived else 'unarchived'}.")
     return redirect('tracker:entry_list')
 
 # --- Project Views ---
@@ -681,7 +687,7 @@ class AnalyticsDashboardView(LoginRequiredMixin, View):
             duration_seconds=Sum(F('end_time') - F('start_time'))
         ).order_by('-duration_seconds')
 
-        category_chart_labels = [item['category'].capitalize() if item['category'] else 'Unassigned' for item in time_per_category_chart]
+        category_chart_labels = [item['category'].capitalize() for item in time_per_category_chart]
         category_chart_data = [item['duration_seconds'].total_seconds() / 3600 for item in time_per_category_chart]
 
         # --- 3. Bar Chart: Earnings per Project ---
@@ -758,8 +764,6 @@ class ReportView(LoginRequiredMixin, View):
                     hours, remainder = divmod(total_seconds, 3600)
                     minutes, seconds = divmod(remainder, 60)
                     entry.formatted_duration = f'{hours:02}:{minutes:02}:{seconds:02}'
-                else:
-                    entry.formatted_duration = "00:00:00"
 
             total_duration_val = sum([entry.duration for entry in entries if entry.duration], timedelta())
             
@@ -843,29 +847,34 @@ def translate_report(request):
         # If translation of the language name fails, fall back to the English name
         translated_language_name = target_language_english_name
 
+    # Helper to safely translate text, falling back to original on error
+    def translate_safely(text, default_text=None):
+        if not text:
+            return default_text if default_text is not None else ""
+        try:
+            return translator.translate(text, dest=target_language).text
+        except (TypeError, AttributeError):
+            return default_text if default_text is not None else text
+
     # Translate static text for the template
     trans_context = {
-        't_translated_report': translator.translate('Translated Report', dest=target_language).text,
-        't_project': translator.translate('Project', dest=target_language).text,
-        't_date_range': translator.translate('Date Range', dest=target_language).text,
-        't_language': translator.translate('Language', dest=target_language).text,
-        't_all_projects': translator.translate('All Projects', dest=target_language).text,
-        't_details': translator.translate('Details', dest=target_language).text,
-        't_start_time': translator.translate('Start Time', dest=target_language).text,
-        't_end_time': translator.translate('End Time', dest=target_language).text,
-        't_duration': translator.translate('Duration', dest=target_language).text,
-        't_description': translator.translate('Description', dest=target_language).text,
-        't_notes': translator.translate('Notes', dest=target_language).text,
-        't_entry': translator.translate('Entry', dest=target_language).text,
-        't_no_entries': translator.translate('No entries found for this period.', dest=target_language).text,
+        't_translated_report': translate_safely('Translated Report'),
+        't_project': translate_safely('Project'),
+        't_date_range': translate_safely('Date Range'),
+        't_language': translate_safely('Language'),
+        't_all_projects': translate_safely('All Projects'),
+        't_details': translate_safely('Details'),
+        't_start_time': translate_safely('Start Time'),
+        't_end_time': translate_safely('End Time'),
+        't_duration': translate_safely('Duration'),
+        't_description': translate_safely('Description'),
+        't_notes': translate_safely('Notes'),
+        't_entry': translate_safely('Entry'),
+        't_no_entries': translate_safely('No entries found for this period.'),
     }
 
     translated_entries = []
     for entry in entries:
-        translated_title = translator.translate(entry.title, dest=target_language).text if entry.title else ""
-        translated_description = translator.translate(entry.description, dest=target_language).text if entry.description else ""
-        translated_notes = translator.translate(entry.notes, dest=target_language).text if entry.notes else ""
-
         # Pre-format duration for PDF
         duration_str = ""
         if entry.duration:
@@ -876,9 +885,9 @@ def translate_report(request):
 
         translated_entries.append({
             'original': entry,
-            'title': translated_title,
-            'description': translated_description,
-            'notes': translated_notes,
+            'title': translate_safely(entry.title),
+            'description': translate_safely(entry.description),
+            'notes': translate_safely(entry.notes),
             'formatted_duration': duration_str,
         })
     
@@ -896,7 +905,11 @@ def translate_report(request):
     }
 
     if export_format == 'pdf':
-        pdf = render_to_pdf('tracker/report_pdf.html', context)
+        # The PDF template expects translated strings at the top level,
+        # so we unpack the trans_context dictionary into the main context.
+        pdf_context = context.copy()
+        pdf_context.update(trans_context)
+        pdf = render_to_pdf('tracker/report_pdf.html', pdf_context)
         if pdf:
             response = HttpResponse(pdf, content_type='application/pdf')
             filename = f"translated_report_{start_date}_to_{end_date}.pdf"
@@ -914,7 +927,7 @@ def translate_report(request):
         for item in translated_entries:
             entry = item['original']
             writer.writerow([
-                entry.title, item['title'], entry.description, entry['description'],
+                entry.title, item['title'], entry.description, item['description'],
                 entry.notes, item['notes'], entry.project.name if entry.project else '-',
                 entry.start_time.strftime('%Y-%m-%d %H:%M:%S'), str(entry.duration)
             ])
@@ -956,7 +969,7 @@ def daily_earnings_tracker(request):
         end_date = form.cleaned_data.get('end_date')
 
         if project_id:
-            project = project_id # The form returns a Project instance
+            project = get_object_or_404(Project, pk=project_id.pk, user=request.user)
 
         if project and project.hourly_rate and start_date and end_date:
             # --- Swedish Tax Constants ---
@@ -978,13 +991,9 @@ def daily_earnings_tracker(request):
 
             total_worked_duration = timedelta(0)
             for entry in entries:
-                if entry.end_time and entry.start_time:
-                    # Ensure worked duration is not negative
-                    duration = (entry.end_time - entry.start_time) - entry.paused_duration
-                    entry.worked_duration = max(duration, timedelta(0))
-                    total_worked_duration += entry.worked_duration
-                else:
-                    entry.worked_duration = timedelta(0)
+                duration = (entry.end_time - entry.start_time) - entry.paused_duration
+                entry.worked_duration = max(duration, timedelta(0))
+                total_worked_duration += entry.worked_duration
 
             # Summary Calculations based on Swedish Sole Trader model
             total_hours = Decimal(total_worked_duration.total_seconds()) / Decimal(3600)
@@ -1090,22 +1099,6 @@ def income_calculator(request):
 
     return render(request, 'tracker/income_calculator.html', context)
 
-
-def ajax_get_project_dates(request):
-    project_id = request.GET.get('project_id')
-    if project_id:
-        project = get_object_or_404(Project, pk=project_id, user=request.user)
-        dates = TimeEntry.objects.filter(project=project, user=request.user).aggregate(
-            start_date=Min('start_time__date'),
-            end_date=Max('end_time__date')
-        )
-        if dates['start_date'] and dates['end_date']:
-            return JsonResponse({
-                'success': True,
-                'start_date': dates['start_date'].strftime('%Y-%m-%d'),
-                'end_date': dates['end_date'].strftime('%Y-%m-%d'),
-            })
-    return JsonResponse({'success': False})
 
 @login_required
 def profile_view(request):

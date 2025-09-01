@@ -6,12 +6,14 @@ from django.utils import timezone
 from PIL import Image
 from django.core.files import File
 import os
-from django.http import QueryDict
+from django.http import QueryDict, HttpResponse
+from urllib.parse import urlencode
 from django.template import Context, Template
 from datetime import timedelta
 from unittest.mock import patch, MagicMock
 from decimal import Decimal, InvalidOperation
-from .utils import format_duration_hms
+from .utils import format_duration_hms, render_to_pdf
+from .forms import TimeEntryManualForm
 
 class ProjectListViewTest(TestCase):
     def setUp(self):
@@ -105,6 +107,43 @@ class ProjectCreateViewTest(TestCase):
         new_project = Project.objects.get(name='New Test Project')
         self.assertEqual(new_project.user, self.user)
 
+    def test_delete_project_view(self):
+        """Test that a project can be deleted."""
+        project_to_delete = Project.objects.create(
+            user=self.user, name='Will be deleted'
+        )
+        delete_url = reverse('tracker:project_delete', kwargs={'pk': project_to_delete.pk})
+        self.assertTrue(Project.objects.filter(pk=project_to_delete.pk).exists())
+        response = self.client.post(delete_url)
+        self.assertRedirects(response, reverse('tracker:project_list'))
+        self.assertFalse(Project.objects.filter(pk=project_to_delete.pk).exists())
+
+    def test_delete_project_get_confirm_page(self):
+        """Test that the project delete confirmation page loads."""
+        project_to_delete = Project.objects.create(user=self.user, name='Confirm Delete')
+        delete_url = reverse('tracker:project_delete', kwargs={'pk': project_to_delete.pk})
+        response = self.client.get(delete_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'tracker/project_confirm_delete.html')
+
+    def test_create_project_with_next_url(self):
+        """Test that creating a project with a 'next' param redirects correctly."""
+        next_url = reverse('tracker:home')
+        url_with_next = f"{self.url}?next={next_url}"
+        form_data = {
+            'name': 'Next URL Project',
+            'description': 'Testing the next param.',
+            'category': 'work',
+            'hourly_rate': 50.00,
+        }
+        response = self.client.post(url_with_next, data=form_data)
+        
+        new_project = Project.objects.get(name='Next URL Project')
+        expected_params = urlencode({
+            'new_project_id': new_project.pk,
+            'new_category': new_project.category
+        })
+        self.assertRedirects(response, f"{next_url}?{expected_params}")
 
 class TimerViewsTest(TestCase):
     def setUp(self):
@@ -131,6 +170,15 @@ class TimerViewsTest(TestCase):
         response = self.client.post(self.start_url, {'title': 'Test Title'})
         self.assertRedirects(response, reverse('tracker:home'))
         self.assertTrue(TimeEntry.objects.filter(user=self.user, end_time__isnull=True, project__isnull=True).exists())
+
+    def test_start_timer_with_invalid_project(self):
+        response = self.client.post(self.start_url, {'project': 999, 'title': 'Invalid Project Test'})
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(TimeEntry.objects.filter(title='Invalid Project Test').exists())
+
+    def test_stop_timer_get_request(self):
+        response = self.client.get(self.stop_url)
+        self.assertRedirects(response, reverse('tracker:home'))
 
     def test_start_timer_get_request(self):
         response = self.client.get(self.start_url)
@@ -177,6 +225,24 @@ class TimerViewsTest(TestCase):
         response = self.client.post(self.resume_url)
         self.assertRedirects(response, reverse('tracker:home'))
         self.assertFalse(TimeEntry.objects.filter(user=self.user, is_paused=True).exists())
+
+    def test_stop_timer_while_paused(self):
+        start_time = timezone.now() - timedelta(minutes=10)
+        pause_time = timezone.now() - timedelta(minutes=5)
+        entry = TimeEntry.objects.create(
+            user=self.user,
+            title='Paused Stop Test',
+            start_time=start_time,
+            is_paused=True,
+            last_pause_time=pause_time
+        )
+        response = self.client.post(self.stop_url)
+        self.assertRedirects(response, reverse('tracker:entry_update', kwargs={'pk': entry.pk}))
+        entry.refresh_from_db()
+        self.assertIsNotNone(entry.end_time)
+        self.assertFalse(entry.is_paused)
+        self.assertIsNone(entry.last_pause_time)
+        self.assertGreater(entry.paused_duration, timedelta(seconds=290)) # Should be ~5 minutes (300s)
 
 class TimeEntryUpdateViewTest(TestCase):
     def setUp(self):
@@ -241,12 +307,12 @@ class TimeEntryUpdateViewTest(TestCase):
         with open(image_path, 'rb') as f:
             form_data = {
                 'title': 'Updated Title',
-                'project': self.project.id,
-                'category': 'work',
                 'start_time': self.entry.start_time.strftime('%Y-%m-%dT%H:%M'),
                 'end_time': self.entry.end_time.strftime('%Y-%m-%dT%H:%M'),
-                'description': 'Test description with image.',
-                'notes': 'Test notes with image.',
+                # Add all required fields for the form to be valid
+                'project': self.project.id,
+                'category': 'work',
+                'description': 'Test description.',
                 'pause_hours': 0,
                 'pause_minutes': 10,
                 'pause_seconds': 0,
@@ -258,6 +324,55 @@ class TimeEntryUpdateViewTest(TestCase):
 
         # Clean up the test image
         os.remove(image_path)
+
+class TimeEntryCreateViewTest(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(username='testuser', password='testpassword')
+        self.client.login(username='testuser', password='testpassword')
+        self.url = reverse('tracker:entry_create')
+
+    def test_create_entry_with_image(self):
+        image = Image.new('RGB', (100, 100), color='green')
+        image_path = 'test_create_image.png'
+        image.save(image_path)
+
+        with open(image_path, 'rb') as f:
+            form_data = {
+                'title': 'Create With Image',
+                'category': 'work',
+                'start_time': timezone.now().strftime('%Y-%m-%dT%H:%M'),
+                'end_time': (timezone.now() + timedelta(hours=1)).strftime('%Y-%m-%dT%H:%M'),
+            }
+            response = self.client.post(self.url, data={**form_data, 'images': f})
+
+        self.assertRedirects(response, reverse('tracker:entry_list'))
+        entry = TimeEntry.objects.get(title='Create With Image')
+        self.assertEqual(entry.images.count(), 1)
+        os.remove(image_path)
+
+class TimeEntryDeleteViewTest(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(username='testuser', password='testpassword')
+        self.client.login(username='testuser', password='testpassword')
+        self.entry = TimeEntry.objects.create(
+            user=self.user,
+            title='Entry to Delete',
+            start_time=timezone.now()
+        )
+        self.url = reverse('tracker:entry_delete', kwargs={'pk': self.entry.pk})
+
+    def test_delete_view_get_request(self):
+        """Test that a GET request to the delete view shows the confirmation page."""
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'tracker/timeentry_confirm_delete.html')
+        self.assertContains(response, 'Are you sure you want to delete')
+
+    def test_delete_view_post_request(self):
+        """Test that a POST request deletes the entry."""
+        response = self.client.post(self.url)
+        self.assertRedirects(response, reverse('tracker:entry_list'))
+        self.assertFalse(TimeEntry.objects.filter(pk=self.entry.pk).exists())
 
 class TimeEntryListViewTest(TestCase):
     def setUp(self):
@@ -320,6 +435,35 @@ class TimeEntryListViewTest(TestCase):
     def test_sort_by_title(self):
         response = self.client.get(self.url, {'sort_by': 'task', 'sort_dir': 'asc'})
         self.assertContains(response, 'Test Entry 1')
+
+    def test_sorting_by_multiple_fields(self):
+        # Test sorting by project name
+        response = self.client.get(self.url, {'sort_by': 'project', 'sort_dir': 'asc'})
+        self.assertEqual(response.status_code, 200)
+        # Test sorting by duration
+        response = self.client.get(self.url, {'sort_by': 'duration', 'sort_dir': 'desc'})
+        self.assertEqual(response.status_code, 200)
+
+    def test_pagination_disabled_with_filters(self):
+        # Create more entries than paginate_by
+        for i in range(20):
+            TimeEntry.objects.create(
+                user=self.user,
+                title=f'Entry for pagination test {i}',
+                start_time=timezone.now(),
+                end_time=timezone.now()
+            )
+        # Request with a filter
+        response = self.client.get(self.url, {'category': 'work'})
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.context['is_paginated'])
+
+    def test_list_view_with_invalid_form_data(self):
+        # Send an invalid date format
+        response = self.client.get(self.url, {'start_date': 'not-a-date'})
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(self.entry1, response.context['entries'])
+        self.assertNotIn(self.entry2, response.context['entries'])
 
 class TemplateTagsTest(TestCase):
     def test_human_duration_filter(self):
@@ -418,6 +562,33 @@ class UtilsTest(TestCase):
         self.assertEqual(format_duration_hms(timedelta(0)), "0s")
         self.assertEqual(format_duration_hms(None), "0s")
         self.assertEqual(format_duration_hms(timedelta(seconds=-10)), "0s")
+
+    @patch('tracker.utils.pisa.pisaDocument')
+    def test_render_to_pdf_error(self, mock_pisa):
+        # Simulate a PDF generation error
+        mock_pisa.return_value.err = 1
+        # The 'report_pdf.html' template is for translated reports and requires
+        # specific context variables. Provide a minimal context to allow it to render.
+        trans_dict = {
+            't_translated_report': '', 't_project': '', 't_date_range': '',
+            't_language': '', 't_all_projects': '', 't_details': '',
+            't_start_time': '', 't_end_time': '', 't_duration': '',
+            't_description': '', 't_notes': '', 't_entry': '', 't_no_entries': ''
+        }
+        context = {
+            'trans': trans_dict,
+            'entries': [],
+            'project': None,
+            'start_date': '2023-01-01',
+            'end_date': '2023-01-31',
+            'target_language': 'Test Language',
+            'request': MagicMock(),
+            'is_rtl': False,
+        }
+        # The view unpacks the translated strings to the top level for PDFs.
+        context.update(trans_dict)
+        pdf = render_to_pdf('tracker/report_pdf.html', context)
+        self.assertIsNone(pdf)
 
 class ProfileViewTest(TestCase):
     def setUp(self):
@@ -558,11 +729,41 @@ class AjaxViewsTest(TestCase):
         self.assertEqual(len(data_work), 1)
         self.assertEqual(data_work[0]['name'], 'Test Project')
 
+    def test_delete_time_entry_image_get_request(self):
+        url = reverse('tracker:ajax_delete_image', kwargs={'pk': self.image.pk})
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 400)
+        data = response.json()
+        self.assertFalse(data['success'])
+        self.assertEqual(data['error'], 'Invalid request method.')
+
+    def test_get_project_dates_no_project_id(self):
+        url = reverse('tracker:ajax_get_project_dates')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertJSONEqual(response.content, {'success': False})
+
+    def test_get_project_dates_no_entries(self):
+        new_project = Project.objects.create(user=self.user, name='Empty Project')
+        url = reverse('tracker:ajax_get_project_dates')
+        response = self.client.get(url, {'project_id': new_project.id})
+        self.assertEqual(response.status_code, 200)
+        self.assertJSONEqual(response.content, {'success': False})
+
+
 class TerminateAccountViewTest(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(username='testuser', password='testpassword')
         self.client.login(username='testuser', password='testpassword')
         self.url = reverse('tracker:terminate_account_confirm')
+
+    def test_terminate_account_get(self):
+        """Test that the confirmation page is rendered on GET."""
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'tracker/terminate_account_confirm.html')
+        # Check that the user still exists
+        self.assertTrue(get_user_model().objects.filter(id=self.user.id).exists())
 
     def test_terminate_account_post(self):
         user_id = self.user.id
@@ -573,10 +774,7 @@ class TerminateAccountViewTest(TestCase):
 
 class BulkActionViewsTest(TestCase):
     def setUp(self):
-        self.user = get_user_model().objects.create_user(
-            username='testuser',
-            password='testpassword'
-        )
+        self.user = get_user_model().objects.create_user(username='testuser', password='testpassword')
         self.client.login(username='testuser', password='testpassword')
         self.entry1 = TimeEntry.objects.create(
             user=self.user,
@@ -616,6 +814,19 @@ class BulkActionViewsTest(TestCase):
         self.assertRedirects(response, reverse('tracker:entry_list'))
         self.assertEqual(TimeEntry.objects.count(), 1)
 
+    def test_bulk_delete_with_preserved_filters(self):
+        filters = "category=work&sort_by=date"
+        response = self.client.post(self.delete_url, {
+            'selected_entries': [self.entry1.pk],
+            'preserved_filters': filters
+        })
+        expected_url = f"{reverse('tracker:entry_list')}?{filters}"
+        self.assertRedirects(response, expected_url)
+
+    def test_bulk_delete_get_request(self):
+        response = self.client.get(self.delete_url)
+        self.assertRedirects(response, reverse('tracker:entry_list'))
+
     def test_bulk_archive_confirm_view(self):
         response = self.client.post(self.archive_confirm_url, {'selected_entries': [self.entry1.pk]})
         self.assertEqual(response.status_code, 200)
@@ -627,6 +838,20 @@ class BulkActionViewsTest(TestCase):
         self.assertRedirects(response, reverse('tracker:entry_list'))
         self.entry1.refresh_from_db()
         self.assertTrue(self.entry1.is_archived)
+
+    def test_bulk_archive_with_preserved_filters(self):
+        filters = "show_archived=on"
+        response = self.client.post(self.archive_url, {
+            'selected_entries': [self.entry1.pk],
+            'action': 'archive',
+            'preserved_filters': filters
+        })
+        expected_url = f"{reverse('tracker:entry_list')}?{filters}"
+        self.assertRedirects(response, expected_url)
+
+    def test_bulk_archive_get_request(self):
+        response = self.client.get(self.archive_url)
+        self.assertRedirects(response, reverse('tracker:entry_list'))
 
     def test_bulk_unarchive_confirm_view(self):
         response = self.client.post(self.unarchive_confirm_url, {'selected_entries': [self.entry3.pk]})
@@ -642,10 +867,20 @@ class BulkActionViewsTest(TestCase):
 
     def test_toggle_archive(self):
         toggle_url = reverse('tracker:entry_toggle_archive', kwargs={'pk': self.entry1.pk})
-        response = self.client.get(toggle_url)
+        # This action should be a POST request to be safe
+        response = self.client.post(toggle_url)
         self.assertRedirects(response, reverse('tracker:entry_list'))
         self.entry1.refresh_from_db()
         self.assertTrue(self.entry1.is_archived)
+
+    def test_toggle_archive_get_request(self):
+        """Test that a GET request to toggle archive redirects without action."""
+        toggle_url = reverse('tracker:entry_toggle_archive', kwargs={'pk': self.entry1.pk})
+        self.assertFalse(self.entry1.is_archived)
+        response = self.client.get(toggle_url)
+        self.assertRedirects(response, reverse('tracker:entry_list'))
+        self.entry1.refresh_from_db()
+        self.assertFalse(self.entry1.is_archived)
 
 class ProjectActionViewsTest(TestCase):
     def setUp(self):
@@ -667,6 +902,26 @@ class ProjectActionViewsTest(TestCase):
             end_time=timezone.now()
         )
         self.toggle_archive_url = reverse('tracker:project_toggle_archive', kwargs={'pk': self.project.pk})
+
+    def test_project_archive_and_unarchive_confirm_views(self):
+        """Test that the project archive/unarchive confirmation pages load."""
+        archive_confirm_url = reverse('tracker:project_archive_confirm', kwargs={'pk': self.project.pk})
+        response = self.client.get(archive_confirm_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'tracker/project_confirm_archive.html')
+
+        unarchive_confirm_url = reverse('tracker:project_unarchive_confirm', kwargs={'pk': self.project.pk})
+        response = self.client.get(unarchive_confirm_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'tracker/project_confirm_unarchive.html')
+
+    def test_project_toggle_archive_get_redirects(self):
+        """Test that a GET request to the toggle archive URL redirects without action."""
+        self.assertFalse(self.project.is_archived)
+        response = self.client.get(self.toggle_archive_url)
+        self.assertRedirects(response, reverse('tracker:project_list'))
+        self.project.refresh_from_db()
+        self.assertFalse(self.project.is_archived)
 
     def test_project_toggle_archive_with_cascade(self):
         self.assertFalse(self.project.is_archived)
@@ -695,6 +950,19 @@ class ProjectActionViewsTest(TestCase):
         self.entry1.refresh_from_db()
         self.assertFalse(self.project.is_archived)
         self.assertFalse(self.entry1.is_archived)
+
+    def test_project_toggle_archive_without_cascade(self):
+        self.assertFalse(self.project.is_archived)
+        self.assertFalse(self.entry1.is_archived)
+
+        # Archive project WITHOUT cascading
+        response = self.client.post(self.toggle_archive_url) # No 'archive_entries' in POST data
+        self.assertRedirects(response, reverse('tracker:project_list'))
+
+        self.project.refresh_from_db()
+        self.entry1.refresh_from_db()
+        self.assertTrue(self.project.is_archived)
+        self.assertFalse(self.entry1.is_archived) # Entry should NOT be archived
 
 class AnalyticsDashboardViewTest(TestCase):
     def setUp(self):
@@ -728,6 +996,42 @@ class AnalyticsDashboardViewTest(TestCase):
         # Check for correct earnings calculation (1hr + 2hr) * 50.00/hr = 150.00
         self.assertContains(response, '150.00')
 
+    def test_dashboard_filter_by_period_7d(self):
+        """Test the dashboard with the 7-day period filter."""
+        response = self.client.get(self.url, {'period': '7d'})
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'tracker/analytics.html')
+        self.assertIn('activity_chart_datasets', response.context)
+        self.assertEqual(response.context['active_period'], '7d')
+
+    def test_dashboard_filter_by_period_1y(self):
+        """Test the dashboard with the 1-year period filter."""
+        response = self.client.get(self.url, {'period': '1y'})
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'tracker/analytics.html')
+        self.assertEqual(response.context['active_period'], '1y')
+
+    def test_dashboard_filter_by_period_3m(self):
+        """Test the dashboard with the 3-month period filter."""
+        response = self.client.get(self.url, {'period': '3m'})
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'tracker/analytics.html')
+        self.assertEqual(response.context['active_period'], '3m')
+
+    def test_dashboard_filter_by_period_15d(self):
+        """Test the dashboard with the 15-day period filter."""
+        response = self.client.get(self.url, {'period': '15d'})
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'tracker/analytics.html')
+        self.assertEqual(response.context['active_period'], '15d')
+
+    def test_dashboard_filter_by_period_6m(self):
+        """Test the dashboard with the 6-month period filter."""
+        response = self.client.get(self.url, {'period': '6m'})
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'tracker/analytics.html')
+        self.assertEqual(response.context['active_period'], '6m')
+
     def test_dashboard_ajax_filter_by_category(self):
         # This tests the AJAX endpoint that refreshes the activity chart
         response = self.client.get(
@@ -749,6 +1053,24 @@ class AnalyticsDashboardViewTest(TestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'No time tracked yet.')
+
+    def test_dashboard_no_entries_period_all(self):
+        """Test the dashboard with period=all when no entries exist."""
+        TimeEntry.objects.all().delete()
+        response = self.client.get(self.url, {'period': 'all'})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'No time tracked yet.')
+        # Check that the chart data is empty
+        self.assertEqual(len(response.context['activity_chart_datasets']), 0)
+
+    def test_dashboard_no_work_or_personal_duration(self):
+        TimeEntry.objects.all().delete()
+        # Create an entry with a default category that isn't 'work' or 'personal'
+        TimeEntry.objects.create(user=self.user, title='No Category', category='other', start_time=timezone.now() - timedelta(hours=1), end_time=timezone.now())
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['work_duration'], timedelta(0))
+        self.assertEqual(response.context['personal_duration'], timedelta(0))
 
 class CustomSocialAccountAdapterTest(TestCase):
     def setUp(self):
@@ -802,6 +1124,14 @@ class CustomSocialAccountAdapterTest(TestCase):
         self.assertEqual(user.first_name, 'FirstName')
         self.assertEqual(user.last_name, 'LastName')
 
+    def test_pre_social_login_no_user_data(self):
+        user = get_user_model()()
+        sociallogin = MagicMock()
+        sociallogin.user = user
+        sociallogin.account.extra_data = {} # No email, no name
+        self.adapter.pre_social_login(request=None, sociallogin=sociallogin)
+        self.assertEqual(user.username, 'user')
+
     def test_pre_social_login_existing_user(self):
         # Create an existing user
         existing_user = get_user_model().objects.create_user(
@@ -843,9 +1173,9 @@ class ReportAndTranslationViewTest(TestCase):
         mock_translator_instance.translate.side_effect = lambda text, dest: MagicMock(text=f"Translated {text}")
 
         today = timezone.now().date()
-        start_of_month = today.replace(day=1)
+        two_days_ago = today - timedelta(days=2)
         response = self.client.get(self.translate_url, {
-            'start_date': start_of_month.strftime('%Y-%m-%d'),
+            'start_date': two_days_ago.strftime('%Y-%m-%d'),
             'end_date': today.strftime('%Y-%m-%d'),
             'target_language': 'es'
         })
@@ -854,6 +1184,34 @@ class ReportAndTranslationViewTest(TestCase):
         self.assertContains(response, 'Translated Report Entry')
         # Check that translate was called multiple times (for title, description, notes, static text etc.)
         self.assertTrue(mock_translator_instance.translate.called)
+
+    @patch('tracker.views.Translator')
+    def test_translate_report_view_with_project_filter(self, MockTranslator):
+        # Mock the translator
+        mock_translator_instance = MockTranslator.return_value
+        mock_translator_instance.translate.side_effect = lambda text, dest: MagicMock(text=f"Translated {text}")
+
+        # Create another project and entry that should be filtered out
+        other_project = Project.objects.create(user=self.user, name='Other Project')
+        TimeEntry.objects.create(
+            user=self.user,
+            project=other_project,
+            title='Other Entry',
+            start_time=timezone.now() - timedelta(days=1),
+            end_time=timezone.now()
+        )
+
+        today = timezone.now().date()
+        two_days_ago = today - timedelta(days=2)
+        response = self.client.get(self.translate_url, {
+            'start_date': two_days_ago.strftime('%Y-%m-%d'),
+            'end_date': today.strftime('%Y-%m-%d'),
+            'target_language': 'es',
+            'project': self.project.id # Filter by the main project
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Translated Report Entry')
+        self.assertNotContains(response, 'Translated Other Entry')
 
     def test_report_view_get_initial(self):
         response = self.client.get(self.report_url)
@@ -864,9 +1222,9 @@ class ReportAndTranslationViewTest(TestCase):
 
     def test_report_view_csv_export(self):
         today = timezone.now().date()
-        start_of_month = today.replace(day=1)
+        two_days_ago = today - timedelta(days=2)
         response = self.client.get(self.report_url, {
-            'start_date': start_of_month.strftime('%Y-%m-%d'),
+            'start_date': two_days_ago.strftime('%Y-%m-%d'),
             'end_date': today.strftime('%Y-%m-%d'),
             'project': self.project.id,
             'export': 'csv',
@@ -876,18 +1234,162 @@ class ReportAndTranslationViewTest(TestCase):
         content = response.content.decode('utf-8')
         self.assertIn('Report Entry', content)
 
-    @patch('tracker.views.render_to_pdf')
-    def test_report_view_pdf_export(self, mock_render_to_pdf):
-        from django.http import HttpResponse
-        mock_render_to_pdf.return_value = HttpResponse(b'PDF content', content_type='application/pdf')
+    def test_report_view_html_display(self):
+        today = timezone.now().date()
+        two_days_ago = today - timedelta(days=2)
+        response = self.client.get(self.report_url, {
+            'start_date': two_days_ago.strftime('%Y-%m-%d'),
+            'end_date': today.strftime('%Y-%m-%d'),
+            'project': self.project.id,
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'tracker/report_form.html')
+        self.assertIn('entries', response.context)
+        self.assertContains(response, 'Report Entry')
+        self.assertIn('total_duration', response.context)
+
+    def test_report_view_filter_by_category(self):
+        """Test the report view filtering by category only."""
+        # Create an entry in a different category that should be filtered out
+        personal_project = Project.objects.create(user=self.user, name='Personal Project', category='personal')
+        TimeEntry.objects.create(
+            user=self.user,
+            project=personal_project,
+            title='Personal Entry',
+            start_time=timezone.now() - timedelta(days=1),
+            end_time=timezone.now()
+        )
         
         today = timezone.now().date()
+        two_days_ago = today - timedelta(days=2)
+        response = self.client.get(self.report_url, {
+            'start_date': two_days_ago.strftime('%Y-%m-%d'),
+            'end_date': today.strftime('%Y-%m-%d'),
+            'category': 'work', # Filter by work category
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Report Entry') # This is in 'work' category
+        self.assertNotContains(response, 'Personal Entry')
+
+    @patch('tracker.views.Translator')
+    def test_translate_report_csv_export(self, MockTranslator):
+        """Test the CSV export functionality of the translated report."""
+        mock_translator_instance = MockTranslator.return_value
+        mock_translator_instance.translate.side_effect = lambda text, dest: MagicMock(text=f"Translated {text}")
+
+        today = timezone.now().date()
+        two_days_ago = today - timedelta(days=2)
+        response = self.client.get(self.translate_url, {
+            'start_date': two_days_ago.strftime('%Y-%m-%d'),
+            'end_date': today.strftime('%Y-%m-%d'),
+            'target_language': 'es',
+            'export': 'csv'
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'text/csv')
+        content = response.content.decode('utf-8')
+        self.assertIn('Translated Title', content)
+        self.assertIn('Translated Report Entry', content)
+
+    def test_report_view_pdf_export(self):
+        today = timezone.now().date()
         start_of_month = today.replace(day=1)
-        response = self.client.get(self.report_url, {'start_date': start_of_month, 'end_date': today, 'export': 'pdf'})
+        response = self.client.get(self.report_url, {'start_date': start_of_month.strftime('%Y-%m-%d'), 'end_date': today.strftime('%Y-%m-%d'), 'export': 'pdf'})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertTrue(response.content.startswith(b'%PDF-'))
+
+    @patch('tracker.views.render_to_pdf')
+    def test_report_view_pdf_export_error(self, mock_render_to_pdf):
+        mock_render_to_pdf.return_value = None # Simulate PDF creation failure
+        today = timezone.now().date()
+        start_of_month = today.replace(day=1)
+        response = self.client.get(self.report_url, {'start_date': start_of_month.strftime('%Y-%m-%d'), 'end_date': today.strftime('%Y-%m-%d'), 'export': 'pdf'})
+        # Should render the HTML page as a fallback
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'tracker/report_form.html')
+
+    @patch('tracker.views.render_to_pdf')
+    def test_translate_report_pdf_export(self, mock_render_to_pdf):
+        mock_render_to_pdf.return_value = HttpResponse(b'PDF content', content_type='application/pdf')
+        today = timezone.now().date()
+        two_days_ago = today - timedelta(days=2)
+        response = self.client.get(self.translate_url, {
+            'start_date': two_days_ago.strftime('%Y-%m-%d'),
+            'end_date': today.strftime('%Y-%m-%d'),
+            'target_language': 'es',
+            'export': 'pdf'
+        })
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['Content-Type'], 'application/pdf')
         mock_render_to_pdf.assert_called_once()
-        self.assertEqual(mock_render_to_pdf.call_args[0][0], 'tracker/report_untranslated_pdf.html')
+
+    def test_translate_report_view_missing_params(self):
+        # Missing 'target_language'
+        response = self.client.get(self.translate_url, {
+            'start_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'end_date': timezone.now().date().strftime('%Y-%m-%d'),
+        })
+        self.assertRedirects(response, self.report_url)
+
+    @patch('tracker.views.Translator')
+    def test_translate_report_view_translator_error(self, MockTranslator):
+        mock_translator_instance = MockTranslator.return_value
+        # Make the first call (for the language name) fail, and subsequent calls succeed.
+        mock_translator_instance.translate.side_effect = [
+            TypeError("Translation failed")
+        ] + [MagicMock(text=f"Translated {i}") for i in range(30)] # for other fields
+
+        response = self.client.get(self.translate_url, {
+            'start_date': (timezone.now() - timedelta(days=1)).strftime('%Y-%m-%d'),
+            'end_date': timezone.now().date().strftime('%Y-%m-%d'),
+            'target_language': 'es'
+        })
+        self.assertEqual(response.status_code, 200)
+        # Because the language name translation failed, it should fall back to the English name.
+        self.assertContains(response, 'Spanish')
+
+    @patch('tracker.views.Translator')
+    def test_translate_report_with_empty_and_failing_fields(self, MockTranslator):
+        # Create an entry with an empty title and a description that will fail translation
+        failing_entry = TimeEntry.objects.create(
+            user=self.user,
+            project=self.project,
+            title='', # Empty title
+            description='Description to fail',
+            start_time=timezone.now() - timedelta(days=1),
+            end_time=timezone.now()
+        )
+
+        def translate_side_effect(text, dest):
+            if text == 'Description to fail':
+                raise TypeError("Simulated failure")
+            return MagicMock(text=f"Translated {text}")
+
+        mock_translator_instance = MockTranslator.return_value
+        mock_translator_instance.translate.side_effect = translate_side_effect
+
+        today = timezone.now().date()
+        two_days_ago = today - timedelta(days=2)
+        response = self.client.get(self.translate_url, {
+            'start_date': two_days_ago.strftime('%Y-%m-%d'),
+            'end_date': today.strftime('%Y-%m-%d'),
+            'target_language': 'es'
+        })
+        self.assertEqual(response.status_code, 200)
+        # The original description should be used as a fallback
+        self.assertContains(response, 'Description to fail')
+        
+        # Find the specific entry in the context to check its translated title.
+        translated_entries = response.context['entries']
+        failing_entry_in_context = None
+        for entry_dict in translated_entries:
+            if entry_dict['original'].pk == failing_entry.pk:
+                failing_entry_in_context = entry_dict
+                break
+        
+        self.assertIsNotNone(failing_entry_in_context, "Failing entry not found in response context")
+        self.assertEqual(failing_entry_in_context['title'], '', "Translated title for an empty original title should be empty.")
 
 class DailyEarningsTrackerTest(TestCase):
     def setUp(self):
@@ -923,6 +1425,18 @@ class DailyEarningsTrackerTest(TestCase):
         self.assertEqual(response.context['gross_pay'], Decimal('100.00'))
         self.assertContains(response, '100.00 SEK')
 
+    def test_daily_earnings_without_project(self):
+        today = timezone.now().date()
+        start_of_month = today.replace(day=1)
+        response = self.client.get(self.url, {
+            'start_date': start_of_month.strftime('%Y-%m-%d'),
+            'end_date': today.strftime('%Y-%m-%d'),
+            'category': 'work',
+            # No project ID provided
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn('gross_pay', response.context)
+
 class IncomeCalculatorTest(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(username='testuser', password='testpassword')
@@ -932,6 +1446,7 @@ class IncomeCalculatorTest(TestCase):
     def test_income_calculator_view(self):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
+        self.assertNotIn('hourly_rate_to_charge', response.context)
         self.assertTemplateUsed(response, 'tracker/income_calculator.html')
 
     def test_income_calculator_with_data(self):
@@ -986,6 +1501,42 @@ class FormTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn('Paused duration cannot be greater than the total entry duration.', form.non_field_errors())
 
+    def test_time_entry_manual_form_invalid_end_time(self):
+        from .forms import TimeEntryManualForm
+        now = timezone.now()
+        form_data = {
+            'title': 'Invalid End Time',
+            'start_time': now,
+            'end_time': now - timedelta(minutes=1), # End time before start time
+            'category': 'work',
+            'project': self.project_work.id,
+        }
+        form = TimeEntryManualForm(data=form_data, user=self.user)
+        self.assertFalse(form.is_valid())
+        self.assertIn('End time must be after start time.', form.non_field_errors())
+
+    def test_time_entry_manual_form_project_category_override(self):
+        """Test that the form correctly overrides the category with the project's category."""
+        self.project_work.category = 'work'
+        self.project_work.save()
+
+        form_data = {
+            'title': 'Category Override Test',
+            'project': self.project_work.id,
+            'category': 'personal',  # Intentionally wrong category
+            'start_time': timezone.now(),
+            'end_time': timezone.now() + timedelta(hours=1),
+        }
+        form = TimeEntryManualForm(data=form_data, user=self.user)
+        self.assertTrue(form.is_valid(), msg=form.errors)
+        self.assertEqual(form.cleaned_data['category'], 'work')
+
+    def test_time_entry_manual_form_no_user(self):
+        # Test that the form initializes without a user (e.g., in admin)
+        form = TimeEntryManualForm()
+        # Check that the project queryset is empty, not erroring
+        self.assertEqual(form.fields['project'].queryset.count(), 0)
+
     def test_report_form_dynamic_project_filtering(self):
         from .forms import ReportForm
         # Form with 'work' category should only show work projects
@@ -1000,7 +1551,7 @@ class FormTests(TestCase):
         form_data = {
             'username': 'newsignup',
             'email': 'newsignup@example.com',
-            'password': 'a-very-secure-pwd-456!',
+            'password1': 'a-very-secure-pwd-456!',
             'password2': 'a-very-secure-pwd-456!',
             'first_name': 'Custom',
             'last_name': 'Signup',
@@ -1056,3 +1607,71 @@ class MiddlewareTest(TestCase):
         mock_pytz.timezone.assert_called_with('Invalid/Timezone')
         mock_timezone.deactivate.assert_called()
         mock_timezone.activate.assert_not_called()
+
+class ModelTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='modeltestuser',
+            password='password'
+        )
+
+    def test_time_entry_duration_for_running_entry(self):
+        """Test that the duration property returns None for a running entry."""
+        running_entry = TimeEntry.objects.create(
+            user=self.user,
+            title='Running Entry',
+            start_time=timezone.now()
+        )
+        self.assertIsNone(running_entry.duration)
+
+    def test_time_entry_duration_with_pause(self):
+        """Test that the duration property correctly subtracts paused_duration."""
+        start = timezone.now()
+        end = start + timedelta(hours=1)
+        pause = timedelta(minutes=10)
+        entry = TimeEntry.objects.create(
+            user=self.user,
+            title='Paused Duration Test',
+            start_time=start,
+            end_time=end,
+            paused_duration=pause
+        )
+        expected_duration = timedelta(minutes=50)
+        self.assertEqual(entry.duration, expected_duration)
+
+    def test_profile_is_created_for_new_user(self):
+        """Test the post_save signal for creating a Profile."""
+        self.assertTrue(hasattr(self.user, 'profile'))
+        self.assertIsInstance(self.user.profile, Profile)
+
+    def test_profile_save_signal_on_user_update(self):
+        """Test that the user's profile is saved when the user is updated."""
+        self.user.first_name = "Updated"
+        self.user.save()
+        self.user.refresh_from_db()
+        self.assertIsNotNone(self.user.profile)
+
+    def test_profile_str(self):
+        """Test the __str__ method of the Profile model."""
+        self.assertEqual(str(self.user.profile), f'{self.user.username} Profile')
+
+    def test_time_entry_str(self):
+        """Test the __str__ method of the TimeEntry model."""
+        entry = TimeEntry.objects.create(
+            user=self.user,
+            title='String Test',
+            start_time=timezone.now()
+        )
+        self.assertEqual(str(entry), f'String Test ({self.user.username})')
+
+class ProjectUpdateViewTest(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(username='testuser', password='testpassword')
+        self.client.login(username='testuser', password='testpassword')
+        self.project = Project.objects.create(user=self.user, name='Original Name')
+        self.url = reverse('tracker:project_update', kwargs={'pk': self.project.pk})
+
+    def test_update_view_loads(self):
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'tracker/project_form.html')

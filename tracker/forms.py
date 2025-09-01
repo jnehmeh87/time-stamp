@@ -52,7 +52,10 @@ class TimeEntryManualForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         if user:
             self.fields['project'].queryset = Project.objects.filter(user=user)
-            self.fields['project'].empty_label = "No Project"
+        else:
+            # If no user is provided (e.g., in Django admin), show an empty queryset.
+            self.fields['project'].queryset = Project.objects.none()
+        self.fields['project'].empty_label = "No Project"
 
         # Populate pause fields from the model's paused_duration
         if self.instance and self.instance.paused_duration:

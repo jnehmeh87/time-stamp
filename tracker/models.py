@@ -65,18 +65,11 @@ class TimeEntry(models.Model):
     @property
     def duration(self):
         if self.end_time:
-            # Ensure paused_duration is not None before subtracting
-            paused_time = self.paused_duration or timedelta(0)
-            return self.end_time - self.start_time - paused_time
+            return self.end_time - self.start_time - self.paused_duration
         return None
     
     def __str__(self):
         return f"{self.title} ({self.user.username})"
-
-    def save(self, *args, **kwargs):
-        # The logic to set category based on project has been moved to the
-        # TimeEntryUpdateForm's clean() method to centralize validation.
-        super().save(*args, **kwargs)
 
 class TimeEntryImage(models.Model):
     time_entry = models.ForeignKey(TimeEntry, on_delete=models.CASCADE, related_name='images')
