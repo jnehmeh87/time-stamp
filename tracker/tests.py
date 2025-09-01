@@ -964,6 +964,40 @@ class ProjectActionViewsTest(TestCase):
         self.assertTrue(self.project.is_archived)
         self.assertFalse(self.entry1.is_archived) # Entry should NOT be archived
 
+class LoginViewTest(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='testuser',
+            password='testpassword'
+        )
+        self.staff_user = get_user_model().objects.create_user(
+            username='staffuser',
+            password='testpassword',
+            is_staff=True
+        )
+        self.url = reverse('account_login')
+
+    def test_regular_user_login_redirects_to_home(self):
+        response = self.client.post(self.url, {'login': 'testuser', 'password': 'testpassword'})
+        self.assertRedirects(response, reverse('tracker:home'))
+
+    def test_staff_user_login_redirects_to_admin(self):
+        response = self.client.post(self.url, {'login': 'staffuser', 'password': 'testpassword'})
+        self.assertRedirects(response, reverse('admin:index'))
+
+    def test_staff_user_login_with_next_param(self):
+        next_url = reverse('admin:auth_user_changelist')
+        login_url_with_next = f"{self.url}?next={next_url}"
+        response = self.client.post(login_url_with_next, {'login': 'staffuser', 'password': 'testpassword'})
+        self.assertRedirects(response, next_url)
+
+    def test_login_failure(self):
+        response = self.client.post(self.url, {'login': 'testuser', 'password': 'wrongpassword'})
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(response, 'account/login.html')
+        self.assertContains(response, 'The username and/or password you specified are not correct.')
+        self.assertFalse(self.entry1.is_archived) # Entry should NOT be archived
+
 class AnalyticsDashboardViewTest(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(username='testuser', password='testpassword')
