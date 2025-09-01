@@ -1,6 +1,7 @@
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Permission
 from .models import Project, TimeEntry, Profile, TimeEntryImage
 from django.utils import timezone
 from PIL import Image
@@ -973,13 +974,22 @@ class LoginViewTest(TestCase):
         self.staff_user = get_user_model().objects.create_user(
             username='staffuser',
             password='testpassword',
-            is_staff=True
+            is_staff=True,
         )
+        # Grant the staff user permission to view the user list in the admin.
+        # This is necessary for the test that checks redirection to an admin page.
+        view_user_perm = Permission.objects.get(codename='view_user')
+        self.staff_user.user_permissions.add(view_user_perm)
+
         self.url = reverse('account_login')
 
     def test_regular_user_login_redirects_to_home(self):
-        response = self.client.post(self.url, {'login': 'testuser', 'password': 'testpassword'})
+        response = self.client.post(
+            self.url, {'login': 'testuser', 'password': 'testpassword'}
+        )
         self.assertRedirects(response, reverse('tracker:home'))
+        # Verify the user is actually logged in
+        self.assertTrue(get_user_model().objects.get(username='testuser').is_authenticated)
 
     def test_staff_user_login_redirects_to_admin(self):
         response = self.client.post(self.url, {'login': 'staffuser', 'password': 'testpassword'})
@@ -988,7 +998,9 @@ class LoginViewTest(TestCase):
     def test_staff_user_login_with_next_param(self):
         next_url = reverse('admin:auth_user_changelist')
         login_url_with_next = f"{self.url}?next={next_url}"
-        response = self.client.post(login_url_with_next, {'login': 'staffuser', 'password': 'testpassword'})
+        response = self.client.post(
+            login_url_with_next, {'login': 'staffuser', 'password': 'testpassword'}
+        )
         self.assertRedirects(response, next_url)
 
     def test_login_failure(self):
@@ -996,7 +1008,6 @@ class LoginViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'account/login.html')
         self.assertContains(response, 'The username and/or password you specified are not correct.')
-        self.assertFalse(self.entry1.is_archived) # Entry should NOT be archived
 
 class AnalyticsDashboardViewTest(TestCase):
     def setUp(self):

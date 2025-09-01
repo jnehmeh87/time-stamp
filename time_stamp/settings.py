@@ -30,18 +30,18 @@ if not DEBUG:
 # Application definition
 
 INSTALLED_APPS = [
+    'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites', # Required by allauth
 
     # Third-party apps
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
-    'django.contrib.admin', # Admin must come after allauth for template/patching overrides
-    'django.contrib.sites', # Required by allauth
     'widget_tweaks',
     'django_countries',
     'crispy_forms',
