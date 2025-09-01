@@ -5,10 +5,10 @@
 }
 body {
     font-family: "DejaVuSans", sans-serif;
-    font-size: 10px;
+    font-size: 10pt;
 }
 small {
-    font-size: 10px; /* Increase size of small text for readability */
+    font-size: 8pt; /* Use points for consistency in PDFs */
 }
 table {
     width: 100%;
