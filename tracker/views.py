@@ -528,6 +528,17 @@ def delete_time_entry_image(request, pk):
 
 
 @login_required
+def session_keep_alive(request):
+    """
+    A simple view that is called by the frontend to keep the user's session alive.
+    It just returns a success response. The real work is done by Django's
+    session middleware, which will update the session's expiry on this request
+    (since SESSION_SAVE_EVERY_REQUEST is True).
+    """
+    return JsonResponse({'success': True})
+
+
+@login_required
 def get_projects_for_category(request):
     category = request.GET.get('category')
     projects = Project.objects.filter(user=request.user)

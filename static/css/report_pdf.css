@@ -1,6 +1,6 @@
 @font-face {
     font-family: "DejaVuSans";
-    src: url("/static/fonts/DejaVuSans.ttf") format("truetype");
+    src: url("../fonts/DejaVuSans.ttf") format("truetype");
     /* You must provide a valid path to a font that supports the target language characters */
 }
 body {

@@ -203,6 +203,30 @@
                     setInterval(updateTimer, 1000);
                 }
                 updateTimer(); // Initial call to display timer immediately
+
+                // Session keep-alive heartbeat
+                function keepSessionAlive() {
+                    fetch("{% url 'tracker:session_keep_alive' %}")
+                        .then(response => {
+                            if (!response.ok) {
+                                // If the response is not OK (e.g., 403 Forbidden because session expired),
+                                // the user has been logged out. Reload the page to show the login screen.
+                                console.warn('Session keep-alive failed. User may be logged out. Reloading.');
+                                window.location.reload();
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.success) {
+                                // You can uncomment the line below for testing purposes.
+                                // console.log('Session extended at ' + new Date().toLocaleTimeString());
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Failed to ping server for session keep-alive:', error);
+                        });
+                }
+                setInterval(keepSessionAlive, 300000); // 300,000 ms = 5 minutes
             }
         });
     </script>

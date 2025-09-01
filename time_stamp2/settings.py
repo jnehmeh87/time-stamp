@@ -136,6 +136,12 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Session settings
+# Session expires after 1 day of inactivity.
+SESSION_COOKIE_AGE = 86400  # 24 * 60 * 60
+# Update the session cookie on every request to prevent timeouts during active use.
+SESSION_SAVE_EVERY_REQUEST = True
+
 # Allauth settings
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',

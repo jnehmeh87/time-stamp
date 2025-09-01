@@ -21,6 +21,7 @@ urlpatterns = [
     # AJAX URLs
     path('ajax/get-entry-details/<int:pk>/', views.get_time_entry_details, name='ajax_get_entry_details'),
     path('ajax/delete-image/<int:pk>/', views.delete_time_entry_image, name='ajax_delete_image'),
+    path('ajax/session-keep-alive/', views.session_keep_alive, name='session_keep_alive'),
 
     # Bulk Actions
     path('entries/bulk-delete-confirm/', views.time_entry_bulk_delete_confirm, name='entry_bulk_delete_confirm'),
