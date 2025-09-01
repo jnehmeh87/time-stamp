@@ -19,8 +19,9 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-default-key-for-devel
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # Set DEBUG to False in production by default.
-# It will only be True if the DEBUG environment variable is explicitly set to 'True'.
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+# It will be True locally unless DEBUG is set to 'False' in the environment.
+# On Heroku, set the DEBUG config var to 'False'.
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 if not DEBUG:
@@ -141,13 +142,9 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Email settings
-if DEBUG:
-    # During development, print emails to the console.
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-else:
-    # In production, also print emails to the console (Heroku logs) to prevent crashes.
-    # For a real application, you would configure a service like SendGrid here.
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# During development and for this Heroku setup, print emails to the console.
+# For a real production app, you would configure a service like SendGrid or Mailgun.
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # Allauth settings
 ACCOUNT_LOGIN_METHODS = ['username', 'email']

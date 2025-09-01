@@ -16,14 +16,20 @@
 
                 {% if socialaccount_providers %}
                 <p class="text-center">{% trans "Sign up quickly with:" %}</p>
-                <a href="#" data-modal-url="{% provider_login_url 'google' process='signup' %}" class="btn btn-outline-dark w-100 mb-2">
-                    <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo" style="height: 20px; margin-right: 10px;">
-                    Sign up with Google
-                </a>
-                <a href="#" data-modal-url="{% provider_login_url 'apple' process='signup' %}" class="btn btn-dark w-100 mb-3">
-                    <i class="fab fa-apple" style="margin-right: 10px;"></i>
-                    Sign up with Apple
-                </a>
+                {% for provider in socialaccount_providers %}
+                    {% if provider.id == 'google' %}
+                    <a href="#" data-modal-url="{% provider_login_url 'google' process='signup' %}" class="btn btn-outline-dark w-100 mb-2">
+                        <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo" style="height: 20px; margin-right: 10px;">
+                        Sign up with Google
+                    </a>
+                    {% endif %}
+                    {% if provider.id == 'apple' %}
+                    <a href="#" data-modal-url="{% provider_login_url 'apple' process='signup' %}" class="btn btn-dark w-100 mb-3">
+                        <i class="fab fa-apple" style="margin-right: 10px;"></i>
+                        Sign up with Apple
+                    </a>
+                    {% endif %}
+                {% endfor %}
 
                 <div class="text-center my-3">
                     <small class="text-muted">OR</small>
