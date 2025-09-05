@@ -49,6 +49,7 @@ INSTALLED_APPS = [
 
     # Local
     'tracker.apps.TrackerConfig',
+
 ]
 
 # Add this setting. It's required by django-allauth.
@@ -181,7 +182,10 @@ if os.environ.get('GOOGLE_CLIENT_ID') and os.environ.get('GOOGLE_SECRET_KEY'):
             'secret': os.environ.get('GOOGLE_SECRET_KEY'),
         },
         'SCOPE': ['profile', 'email'],
-        'AUTH_PARAMS': {'access_type': 'online'}
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+            'prompt': 'select_account', # This will force the account chooser
+        }
     }
 
 # Conditionally enable Apple provider if all credentials are set
