@@ -23,9 +23,13 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-default-key-for-devel
 # On Heroku, set the DEBUG config var to 'False'.
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
-if not DEBUG:
-    ALLOWED_HOSTS.append('timestamp-trackr-68fdb365e285.herokuapp.com')
+ALLOWED_HOSTS = []
+
+# Get the production hostname from an environment variable
+HEROKU_HOSTNAME = os.environ.get('HEROKU_HOSTNAME')
+if HEROKU_HOSTNAME:
+    ALLOWED_HOSTS.append(HEROKU_HOSTNAME)
+
 
 # Application definition
 
@@ -128,6 +132,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
 
 STATIC_URL = '/static/'
+# Add localhost for local development if DEBUG is True
+if DEBUG:
+    ALLOWED_HOSTS.extend(['localhost', '127.0.0.1'])
+
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
