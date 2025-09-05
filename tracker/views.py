@@ -123,22 +123,10 @@ class CustomLoginView(AllauthLoginView):
     Custom login view to redirect staff members to the admin panel
     and regular users to the standard home page.
     """
-    def form_valid(self, form):
-        """
-        This method is called upon successful login.
-        We override it to customize the redirect behavior.
-        """
-        # The authenticated user object is available on the form.
-        user = form.user
-
-        if user.is_staff:
-            # For staff users, determine the redirect URL.
-            # It prioritizes the `?next=` parameter, falling back to the admin index.
-            redirect_to = get_next_redirect_url(self.request) or reverse('admin:index')
-            return form.login(self.request, redirect_url=redirect_to)
-
-        # For all other users, use the default behavior from the parent class.
-        return super().form_valid(form)
+    def get_success_url(self):
+        if self.request.user.is_staff:
+            return '/admin/'
+        return '/'
 
 
 # --- Time Entry Views ---
