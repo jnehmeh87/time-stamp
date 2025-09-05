@@ -23,10 +23,10 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-default-key-for-devel
 # On Heroku, set the DEBUG config var to 'False'.
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
  
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'timestamp-trackr-68fdb365e285.herokuapp.com']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'timestamp-trackr.herokuapp.com']
  
  # Get the production hostname from an environment variable
-HEROKU_APP_NAME = os.environ.get('HEROKU_APP_NAME')
+HEROKU_APP_NAME = os.environ.get('timestamp-trackr')
 if HEROKU_APP_NAME:
     HEROKU_HOSTNAME = f"{HEROKU_APP_NAME}.herokuapp.com"
     ALLOWED_HOSTS.append(HEROKU_HOSTNAME)
