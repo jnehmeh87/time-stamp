@@ -22,16 +22,17 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-default-key-for-devel
 # It will be True locally unless DEBUG is set to 'False' in the environment.
 # On Heroku, set the DEBUG config var to 'False'.
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
-
-ALLOWED_HOSTS = []
-
-# Get the production hostname from an environment variable
-HEROKU_HOSTNAME = os.environ.get('HEROKU_HOSTNAME')
-if HEROKU_HOSTNAME:
+ 
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ 
+ # Get the production hostname from an environment variable
+HEROKU_APP_NAME = os.environ.get('HEROKU_APP_NAME')
+if HEROKU_APP_NAME:
+    HEROKU_HOSTNAME = f"{HEROKU_APP_NAME}.herokuapp.com"
     ALLOWED_HOSTS.append(HEROKU_HOSTNAME)
-
-# CSRF Trusted Origins for secure POST requests
-# This is crucial for allowing logins and form submissions on your deployed site.
+ 
+ # CSRF Trusted Origins for secure POST requests
+ # This is crucial for allowing logins and form submissions on your deployed site.
 CSRF_TRUSTED_ORIGINS = []
 if HEROKU_HOSTNAME:
     CSRF_TRUSTED_ORIGINS.append(f'https://{HEROKU_HOSTNAME}')
@@ -138,10 +139,6 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
 
 STATIC_URL = '/static/'
-# Add localhost for local development if DEBUG is True
-if DEBUG:
-    ALLOWED_HOSTS.extend(['localhost', '127.0.0.1'])
-
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
