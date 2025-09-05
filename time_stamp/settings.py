@@ -23,18 +23,8 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-default-key-for-devel
 # On Heroku, set the DEBUG config var to 'False'.
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
  
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'timestamp-trackr.herokuapp.com']
-CSRF_TRUSTED_ORIGINS = ['https://timestamp-trackr.herokuapp.com']
-
-# Get the production hostname from an environment variable
-HEROKU_APP_NAME = os.environ.get('HEROKU_APP_NAME')
-if HEROKU_APP_NAME:
-    HEROKU_HOSTNAME = f"{HEROKU_APP_NAME}.herokuapp.com"
-    if HEROKU_HOSTNAME not in ALLOWED_HOSTS:
-        ALLOWED_HOSTS.append(HEROKU_HOSTNAME)
-    # This is crucial for allowing logins and form submissions on your deployed site.
-    if f'https://{HEROKU_HOSTNAME}' not in CSRF_TRUSTED_ORIGINS:
-        CSRF_TRUSTED_ORIGINS.append(f'https://{HEROKU_HOSTNAME}')
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'timestamp-trackr-68fdb365e285.herokuapp.com']
+CSRF_TRUSTED_ORIGINS = ['https://timestamp-trackr-68fdb365e285.herokuapp.com']
 
 
 # Application definition
