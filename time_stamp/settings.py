@@ -30,6 +30,12 @@ HEROKU_HOSTNAME = os.environ.get('HEROKU_HOSTNAME')
 if HEROKU_HOSTNAME:
     ALLOWED_HOSTS.append(HEROKU_HOSTNAME)
 
+# CSRF Trusted Origins for secure POST requests
+# This is crucial for allowing logins and form submissions on your deployed site.
+CSRF_TRUSTED_ORIGINS = []
+if HEROKU_HOSTNAME:
+    CSRF_TRUSTED_ORIGINS.append(f'https://{HEROKU_HOSTNAME}')
+
 
 # Application definition
 
