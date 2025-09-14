@@ -615,11 +615,22 @@ class ProfileViewTest(TestCase):
         self.assertContains(response, 'test@example.com')
         self.assertContains(response, 'Sweden') # From country code 'SE'
 
+    def test_profile_view_with_job_title(self):
+        # Set a job title and test that it's displayed
+        self.profile.job_title = 'Senior Developer'
+        self.profile.save()
+        
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Senior Developer')
+        self.assertContains(response, 'Job Title')
+
     def test_profile_view_post_success(self):
         form_data = {
             'first_name': 'UpdatedFirst',
             'last_name': 'UpdatedLast',
             'email': 'updated@example.com',
+            'job_title': 'Software Engineer',
             'country': 'US',
             'address': '123 Main St',
             'phone_number': '555-1234'
@@ -633,6 +644,7 @@ class ProfileViewTest(TestCase):
         self.assertEqual(self.user.first_name, 'UpdatedFirst')
         self.assertEqual(self.user.last_name, 'UpdatedLast')
         self.assertEqual(self.user.email, 'updated@example.com')
+        self.assertEqual(self.profile.job_title, 'Software Engineer')
         self.assertEqual(str(self.profile.country), 'US')
         self.assertEqual(self.profile.address, '123 Main St')
         self.assertEqual(self.profile.phone_number, '555-1234')
@@ -1607,6 +1619,7 @@ class FormTests(TestCase):
             'password2': 'a-very-secure-pwd-456!',
             'first_name': 'Custom',
             'last_name': 'Signup',
+            'job_title': 'Test Developer',
             'country': 'US',
             'address': '123 Test St',
             'phone_number': '123-456-7890'
@@ -1622,6 +1635,7 @@ class FormTests(TestCase):
 
         self.assertIsNotNone(user)
         self.assertEqual(user.first_name, 'Custom')
+        self.assertEqual(user.profile.job_title, 'Test Developer')
         self.assertEqual(user.profile.country, 'US')
         self.assertEqual(user.profile.address, '123 Test St')
 
@@ -1706,6 +1720,21 @@ class ModelTests(TestCase):
     def test_profile_str(self):
         """Test the __str__ method of the Profile model."""
         self.assertEqual(str(self.user.profile), f'{self.user.username} Profile')
+
+    def test_profile_job_title_field(self):
+        """Test that the job_title field works correctly."""
+        profile = self.user.profile
+        profile.job_title = 'Software Engineer'
+        profile.save()
+        
+        profile.refresh_from_db()
+        self.assertEqual(profile.job_title, 'Software Engineer')
+        
+        # Test empty job title
+        profile.job_title = ''
+        profile.save()
+        profile.refresh_from_db()
+        self.assertEqual(profile.job_title, '')
 
     def test_time_entry_str(self):
         """Test the __str__ method of the TimeEntry model."""
