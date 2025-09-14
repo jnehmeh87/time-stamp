@@ -154,8 +154,9 @@ class UserUpdateForm(forms.ModelForm):
 class ProfileUpdateForm(forms.ModelForm):
     class Meta:
         model = Profile
-        fields = ('country', 'address', 'phone_number')
+        fields = ('job_title', 'country', 'address', 'phone_number')
         widgets = {
+            'job_title': forms.TextInput(attrs={'class': 'form-control'}),
             'country': forms.Select(attrs={'class': 'form-select'}),
             'address': forms.TextInput(attrs={'class': 'form-control'}),
             'phone_number': forms.TextInput(attrs={'class': 'form-control', 'id': 'id_phone_number'}),
@@ -164,6 +165,7 @@ class ProfileUpdateForm(forms.ModelForm):
 class CustomSignupForm(SignupForm):
     first_name = forms.CharField(max_length=30, label='First Name', widget=forms.TextInput(attrs={'placeholder': 'First Name'}))
     last_name = forms.CharField(max_length=30, label='Last Name', widget=forms.TextInput(attrs={'placeholder': 'Last Name'}))
+    job_title = forms.CharField(max_length=100, label='Job Title', widget=forms.TextInput(attrs={'placeholder': 'Your job title'}), required=False)
     country = CountryField(blank_label='(select country)').formfield(required=False)
     address = forms.CharField(max_length=255, label='Address', widget=forms.TextInput(attrs={'placeholder': 'Your address'}), required=False)
     phone_number = forms.CharField(max_length=20, label='Phone Number', widget=forms.TextInput(attrs={'placeholder': 'Your phone number'}), required=False)
@@ -175,6 +177,7 @@ class CustomSignupForm(SignupForm):
         user.save()
 
         # Save profile data
+        user.profile.job_title = self.cleaned_data['job_title']
         user.profile.country = self.cleaned_data['country']
         user.profile.address = self.cleaned_data['address']
         user.profile.phone_number = self.cleaned_data['phone_number']

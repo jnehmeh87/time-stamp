@@ -47,6 +47,8 @@
                                     <dt class="col-sm-3">Email</dt>
                                     <dd class="col-sm-9">{{ user_form.instance.email|default:"-" }}</dd>
                                     <hr class="my-3">
+                                    <dt class="col-sm-3">Job Title</dt>
+                                    <dd class="col-sm-9">{{ profile_form.instance.job_title|default:"-" }}</dd>
                                     <dt class="col-sm-3">Country</dt>
                                     <dd class="col-sm-9">{{ profile_form.instance.country.name|default:"-" }}</dd>
                                     <dt class="col-sm-3">Address</dt>
