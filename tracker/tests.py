@@ -1626,9 +1626,9 @@ class FormTests(TestCase):
         self.assertEqual(user.profile.address, '123 Test St')
 
 class MiddlewareTest(TestCase):
-    @patch('tracker.middleware.pytz')
+    @patch('tracker.middleware.ZoneInfo')
     @patch('tracker.middleware.timezone')
-    def test_timezone_middleware_valid_cookie(self, mock_timezone, mock_pytz):
+    def test_timezone_middleware_valid_cookie(self, mock_timezone, mock_zoneinfo):
         from .middleware import TimezoneMiddleware
         middleware = TimezoneMiddleware(get_response=lambda r: None)
         request = MagicMock()
@@ -1636,27 +1636,23 @@ class MiddlewareTest(TestCase):
 
         middleware(request)
 
-        mock_pytz.timezone.assert_called_with('Europe/Stockholm')
-        mock_timezone.activate.assert_called_with(mock_pytz.timezone.return_value)
+        mock_zoneinfo.assert_called_with('Europe/Stockholm')
+        mock_timezone.activate.assert_called_with(mock_zoneinfo.return_value)
 
-    @patch('tracker.middleware.pytz')
+    @patch('tracker.middleware.ZoneInfo')
     @patch('tracker.middleware.timezone')
-    def test_timezone_middleware_invalid_cookie(self, mock_timezone, mock_pytz):
-        from .middleware import TimezoneMiddleware
-        import pytz  # Import the real pytz to get the real exception
+    def test_timezone_middleware_invalid_cookie(self, mock_timezone, mock_zoneinfo):
+        from .middleware import TimezoneMiddleware, ZoneInfoNotFoundError
         middleware = TimezoneMiddleware(get_response=lambda r: None)
         request = MagicMock()
         request.COOKIES = {'timezone': 'Invalid/Timezone'}
 
-        # When the middleware's code runs `except pytz.UnknownTimeZoneError:`,
-        # `pytz` is a mock. We need to ensure that `mock_pytz.UnknownTimeZoneError`
-        # refers to the actual exception class so it can be caught.
-        mock_pytz.UnknownTimeZoneError = pytz.UnknownTimeZoneError
-        mock_pytz.timezone.side_effect = pytz.UnknownTimeZoneError
+        # Configure the mock to raise the correct exception
+        mock_zoneinfo.side_effect = ZoneInfoNotFoundError
 
         middleware(request)
 
-        mock_pytz.timezone.assert_called_with('Invalid/Timezone')
+        mock_zoneinfo.assert_called_with('Invalid/Timezone')
         mock_timezone.deactivate.assert_called()
         mock_timezone.activate.assert_not_called()
 

@@ -4,6 +4,7 @@ Django settings for time_stamp project.
 
 from pathlib import Path
 import os
+import sys
 import dj_database_url
 from dotenv import load_dotenv
 
@@ -19,9 +20,9 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-default-key-for-devel
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # Set DEBUG to False in production by default.
-# It will be True locally unless DEBUG is set to 'False' in the environment.
-# On Heroku, set the DEBUG config var to 'False'.
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+# It will be True locally if DATABASE_URL is not set, and False otherwise.
+# You can override this by setting the DEBUG environment variable to 'True' or 'False'.
+DEBUG = os.environ.get('DEBUG', str('DATABASE_URL' not in os.environ)) == 'True'
  
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'timestamp-trackr-68fdb365e285.herokuapp.com']
 CSRF_TRUSTED_ORIGINS = ['https://timestamp-trackr-68fdb365e285.herokuapp.com']
@@ -100,10 +101,18 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-# If DATABASE_URL is set in the environment, use it for production (e.g., on Heroku)
+
+# If DATABASE_URL is set, use it.
 if 'DATABASE_URL' in os.environ:
     DATABASES['default'] = dj_database_url.config(conn_max_age=600, ssl_require=not DEBUG)
 
+# If running tests, override the database to use SQLite.
+# This is to avoid permission issues and to speed up tests.
+if 'test' in sys.argv:
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': str(BASE_DIR / 'test_db.sqlite3'),
+    }
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 

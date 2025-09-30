@@ -1,5 +1,5 @@
 from django.urls import reverse
-import pytz
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from django.utils import timezone
 
 class TimezoneMiddleware:
@@ -10,8 +10,8 @@ class TimezoneMiddleware:
         tzname = request.COOKIES.get('timezone')
         if tzname:
             try:
-                timezone.activate(pytz.timezone(tzname))
-            except pytz.UnknownTimeZoneError:
+                timezone.activate(ZoneInfo(tzname))
+            except ZoneInfoNotFoundError:
                 # If the timezone from the cookie is invalid, deactivate to use the default.
                 timezone.deactivate()
         else:
