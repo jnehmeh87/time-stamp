@@ -22,7 +22,6 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('users', '0001_initial'),
-        ('tracker', '0020_alter_profile_address_alter_profile_phone_number'),
         ('auth', '0012_alter_user_first_name_max_length'),
     ]
 

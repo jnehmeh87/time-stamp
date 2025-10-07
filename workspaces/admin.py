@@ -7,8 +7,8 @@ class TimeEntryImageInline(admin.TabularInline):
 
 @admin.register(TimeEntry)
 class TimeEntryAdmin(admin.ModelAdmin):
-    list_display = ('title', 'user', 'project', 'start_time', 'end_time', 'category', 'is_archived')
-    list_filter = ('user', 'project', 'category', 'start_time')
+    list_display = ('title', 'user', 'project', 'start_time', 'end_time', 'is_archived')
+    list_filter = ('user', 'project', 'start_time')
     search_fields = ('title', 'description', 'notes')
     inlines = [TimeEntryImageInline]
 

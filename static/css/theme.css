@@ -1,0 +1,40 @@
+:root {
+    --primary-color: #00a8ff;
+    --secondary-color: #00ff9d;
+    --background-color: #0a0a0a;
+    --surface-color: #1a1a1a;
+    --text-color: #ffffff;
+    --text-secondary-color: #a0a0a0;
+    --border-color: #333333;
+}
+
+body {
+    background-color: var(--background-color);
+    color: var(--text-color);
+}
+
+.card {
+    background-color: var(--surface-color);
+    border-color: var(--border-color);
+}
+
+.btn-primary {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.btn-secondary {
+    background-color: var(--secondary-color);
+    border-color: var(--secondary-color);
+    color: #000;
+}
+
+.nav-tabs .nav-link.active {
+    background-color: var(--surface-color);
+    border-color: var(--border-color);
+    color: var(--primary-color);
+}
+
+.nav-tabs .nav-link {
+    color: var(--text-secondary-color);
+}

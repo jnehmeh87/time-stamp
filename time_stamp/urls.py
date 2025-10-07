@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from tracker.views import CustomLoginView
+from users.views import CustomLoginView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -15,11 +15,13 @@ urlpatterns = [
     path('accounts/', include('allauth.urls')),
 
     # Include your main application's URLs
-    path('tracker/', include('tracker.urls', namespace='tracker')),
     path('', include('workspaces.urls', namespace='workspaces')),
+    path('reports/', include('reports.urls', namespace='reports')),
+    path('invoicing/', include('invoicing.urls', namespace='invoicing')),
+    path('subscriptions/', include('subscriptions.urls', namespace='subscriptions')),
+    path('users/', include('users.urls', namespace='users')),
 ]
 
 # This is standard practice for serving media files during development.
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-

@@ -1,5 +1,5 @@
 from django import forms
-from .models import TimeEntry, Project, CATEGORY_CHOICES
+from .models import TimeEntry, Project, Contact
 from django.core.exceptions import ValidationError
 from datetime import timedelta
 from django.contrib.auth import get_user_model
@@ -26,7 +26,7 @@ class TimeEntryManualForm(forms.ModelForm):
     class Meta:
         model = TimeEntry
         fields = [
-            'title', 'category', 'project', 'start_time', 'end_time', 
+            'title', 'project', 'start_time', 'end_time', 
             'description', 'notes'
         ]
         widgets = {
@@ -39,7 +39,6 @@ class TimeEntryManualForm(forms.ModelForm):
                 format='%Y-%m-%dT%H:%M'
             ),
             'title': forms.TextInput(attrs={'class': 'form-control'}),
-            'category': forms.Select(attrs={'class': 'form-select'}),
             'project': forms.Select(attrs={'class': 'form-select'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
             'notes': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
@@ -63,11 +62,6 @@ class TimeEntryManualForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        project = cleaned_data.get('project')
-
-        if project:
-            cleaned_data['category'] = project.category
-
         hours = cleaned_data.get('pause_hours') or 0
         minutes = cleaned_data.get('pause_minutes') or 0
         seconds = cleaned_data.get('pause_seconds') or 0
@@ -97,10 +91,29 @@ class TimeEntryManualForm(forms.ModelForm):
 class ProjectForm(forms.ModelForm):
     class Meta:
         model = Project
-        fields = ['name', 'description', 'category', 'hourly_rate']
+        fields = ['name', 'description', 'hourly_rate']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'category': forms.Select(attrs={'class': 'form-select'}),
             'hourly_rate': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+        }
+
+class ClientForm(forms.ModelForm):
+    class Meta:
+        model = Contact
+        fields = ['name', 'email', 'billing_address', 'vat_id', 'send_reminders']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'email': forms.EmailInput(attrs={'class': 'form-control'}),
+            'billing_address': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+            'vat_id': forms.TextInput(attrs={'class': 'form-control'}),
+            'send_reminders': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+
+class CategoryForm(forms.ModelForm):
+    class Meta:
+        model = Contact
+        fields = ['name']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
         }

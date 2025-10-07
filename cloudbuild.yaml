@@ -1,0 +1,21 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'europe-north2-docker.pkg.dev/puncha-mera/timestamp-repo/timestamp-app', '.']
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', 'europe-north2-docker.pkg.dev/puncha-mera/timestamp-repo/timestamp-app']
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: gcloud
+  args:
+  - 'run'
+  - 'deploy'
+  - 'timestamp-app'
+  - '--image'
+  - 'europe-north2-docker.pkg.dev/puncha-mera/timestamp-repo/timestamp-app'
+  - '--region'
+  - 'europe-north2'
+  - '--platform'
+  - 'managed'
+  - '--allow-unauthenticated'
+  - '--set-secrets=SECRET_KEY=django_secret_key:latest,DATABASE_URL=database_url:latest'
+images:
+- 'europe-north2-docker.pkg.dev/puncha-mera/timestamp-repo/timestamp-app'

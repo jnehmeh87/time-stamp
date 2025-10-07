@@ -7,6 +7,8 @@ import os
 import sys
 import dj_database_url
 from dotenv import load_dotenv
+import io
+from google.cloud import secretmanager
 
 # Add this line near the top of your settings.py file
 load_dotenv()
@@ -18,8 +20,33 @@ with open(os.path.join(BASE_DIR, 'VERSION')) as f:
     APP_VERSION = f.read().strip()
 
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-default-key-for-development')
+# Fetch secrets from Google Cloud Secret Manager
+try:
+    # Create the Secret Manager client.
+    client = secretmanager.SecretManagerServiceClient()
+
+    # Your project ID and secret names.
+    project_id = "puncha-mera"
+    secret_key_name = "django_secret_key"
+    database_url_name = "database_url"
+
+    # Build the resource name of the secret version.
+    secret_key_version_name = f"projects/{project_id}/secrets/{secret_key_name}/versions/latest"
+    database_url_version_name = f"projects/{project_id}/secrets/{database_url_name}/versions/latest"
+
+    # Access the secret versions.
+    response = client.access_secret_version(request={"name": secret_key_version_name})
+    SECRET_KEY = response.payload.data.decode("UTF-8")
+
+    response = client.access_secret_version(request={"name": database_url_version_name})
+    DATABASE_URL = response.payload.data.decode("UTF-8")
+
+except Exception as e:
+    # Fallback for local development or if secrets are not found
+    print(f"Could not fetch secrets from Secret Manager: {e}")
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-default-key-for-development')
+    DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite3')
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # Set DEBUG to False in production by default.
@@ -53,8 +80,10 @@ INSTALLED_APPS = [
 
     # Local
     'users.apps.UsersConfig',
-    'tracker.apps.TrackerConfig',
     'workspaces',
+    'reports.apps.ReportsConfig',
+    'invoicing.apps.InvoicingConfig',
+    'subscriptions.apps.SubscriptionsConfig',
 
 ]
 
@@ -67,8 +96,6 @@ MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware', # Whitenoise for static files
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'tracker.middleware.TimezoneMiddleware',
-    'tracker.middleware.ClearSocialSessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -102,25 +129,12 @@ WSGI_APPLICATION = 'time_stamp.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-# Default to SQLite for local development
+# Use the fetched DATABASE_URL
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(default=DATABASE_URL)
 }
 
-# If DATABASE_URL is set, use it.
-if 'DATABASE_URL' in os.environ:
-    DATABASES['default'] = dj_database_url.config(conn_max_age=600, ssl_require=not DEBUG)
 
-# If running tests, override the database to use SQLite.
-# This is to avoid permission issues and to speed up tests.
-if 'test' in sys.argv:
-    DATABASES['default'] = {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': str(BASE_DIR / 'test_db.sqlite3'),
-    }
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 
@@ -180,8 +194,8 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # Allauth settings
 ACCOUNT_LOGIN_METHODS = ['username', 'email']
 ACCOUNT_EMAIL_VERIFICATION = 'optional' # Can be 'mandatory' in production
-LOGIN_REDIRECT_URL = 'tracker:home'
-LOGOUT_REDIRECT_URL = 'tracker:home'
+LOGIN_REDIRECT_URL = 'workspaces:home'
+LOGOUT_REDIRECT_URL = 'workspaces:home'
 SOCIALACCOUNT_AUTO_SIGNUP = True
 
 # Session duration settings
@@ -193,7 +207,6 @@ SESSION_SAVE_EVERY_REQUEST = True
 ACCOUNT_SESSION_COOKIE_AGE = 31536000  # 365 * 24 * 60 * 60
 # Ensure the "Remember Me" checkbox is displayed
 ACCOUNT_SESSION_REMEMBER = None
-SOCIALACCOUNT_ADAPTER = 'tracker.adapters.CustomSocialAccountAdapter'
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
@@ -233,8 +246,12 @@ if all(os.environ.get(key) for key in ['APPLE_CLIENT_ID', 'APPLE_KEY_ID', 'APPLE
     }
 
 ACCOUNT_FORMS = {
-    'signup': 'tracker.forms.CustomSignupForm',
+    'signup': 'users.forms.CustomSignupForm',
 }
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
+
+STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY', 'pk_test_dummy')
+STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', 'sk_test_dummy')
+STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', 'whsec_dummy')

@@ -1,87 +1,162 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.views import View
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.urls import reverse_lazy, reverse
-from .models import TimeEntry, Project, TimeEntryImage
-from .forms import ProjectForm, TimeEntryManualForm
+from .models import TimeEntry, Project, TimeEntryImage, Contact
+from .forms import ProjectForm, TimeEntryManualForm, ClientForm, CategoryForm
 from django.contrib import messages
 from django.db.models import Q
 from django.http import JsonResponse
 from datetime import timedelta
 from .utils import format_duration_hms
+from django.db import transaction
+from django.utils import timezone
+from .mixins import OrganizationPermissionMixin
+
+class HomePageView(View):
+    def get(self, request, *args, **kwargs):
+        if request.user.is_authenticated:
+            active_entry = TimeEntry.objects.filter(user=request.user, end_time__isnull=True).first()
+            projects = Project.objects.filter(organization__members=request.user)
+            recent_entries = TimeEntry.objects.filter( 
+                user=request.user, 
+                end_time__isnull=False
+            ).select_related('project').order_by('-start_time')[:10]
+
+            context = {
+                'active_entry': active_entry,
+                'projects': projects,
+                'recent_entries': recent_entries,
+                'new_project_id': request.GET.get('new_project_id'),
+            }
+            return render(request, 'home.html', context)
+        else:
+            return render(request, 'tracker/landing.html')
+
+@login_required
+def start_timer(request):
+    if request.method == 'POST':
+        title = request.POST.get('title', 'New Entry')
+        project_id = request.POST.get('project')
+
+        project = None
+        if project_id:
+            project = get_object_or_404(Project, pk=project_id, organization__members=request.user)
+
+        with transaction.atomic():
+            if not TimeEntry.objects.select_for_update().filter(user=request.user, end_time__isnull=True).exists():
+                TimeEntry.objects.create(
+                    user=request.user,
+                    start_time=timezone.now(),
+                    title=title,
+                    project=project,
+                )
+    return redirect('workspaces:home')
+
+@login_required
+def stop_timer(request):
+    if request.method == 'POST':
+        with transaction.atomic():
+            active_entry = TimeEntry.objects.select_for_update().filter(user=request.user, end_time__isnull=True).first()
+            if active_entry:
+                if active_entry.is_paused and active_entry.last_pause_time:
+                    pause_duration = timezone.now() - active_entry.last_pause_time
+                    active_entry.paused_duration += pause_duration
+                    active_entry.is_paused = False
+                    active_entry.last_pause_time = None
+
+                active_entry.end_time = timezone.now()
+                active_entry.full_clean()
+                active_entry.save()
+                return redirect('workspaces:time_entry_update', pk=active_entry.pk)
+    return redirect('workspaces:home')
+
+@login_required
+def pause_timer(request):
+    if request.method == 'POST':
+        with transaction.atomic():
+            active_entry = TimeEntry.objects.select_for_update().filter(user=request.user, end_time__isnull=True, is_paused=False).first()
+            if active_entry:
+                active_entry.is_paused = True
+                active_entry.last_pause_time = timezone.now()
+                active_entry.save()
+    return redirect('workspaces:home')
+
+@login_required
+def resume_timer(request):
+    if request.method == 'POST':
+        with transaction.atomic():
+            active_entry = TimeEntry.objects.select_for_update().filter(user=request.user, end_time__isnull=True, is_paused=True).first()
+            if active_entry and active_entry.last_pause_time:
+                pause_duration = timezone.now() - active_entry.last_pause_time
+                active_entry.paused_duration += pause_duration
+                active_entry.is_paused = False
+                active_entry.last_pause_time = None
+                active_entry.save()
+    return redirect('workspaces:home')
+
+@login_required
+def session_keep_alive(request):
+    return JsonResponse({'success': True})
 
 # --- Project Views ---
 
-class ProjectListView(LoginRequiredMixin, ListView):
+class ProjectListView(LoginRequiredMixin, OrganizationPermissionMixin, ListView):
     model = Project
     template_name = 'workspaces/project_list.html'
     context_object_name = 'projects'
 
-    def get_queryset(self):
-        return Project.objects.filter(user=self.request.user)
-
-class ProjectCreateView(LoginRequiredMixin, CreateView):
+class ProjectCreateView(LoginRequiredMixin, OrganizationPermissionMixin, CreateView):
     model = Project
     form_class = ProjectForm
     template_name = 'workspaces/project_form.html'
     success_url = reverse_lazy('workspaces:project_list')
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user
-        return kwargs
 
     def form_valid(self, form):
-        form.instance.user = self.request.user
+        form.instance.organization = self.request.user.organizations.first()
         return super().form_valid(form)
 
-class ProjectUpdateView(LoginRequiredMixin, UpdateView):
+class ProjectUpdateView(LoginRequiredMixin, OrganizationPermissionMixin, UpdateView):
     model = Project
     form_class = ProjectForm
     template_name = 'workspaces/project_form.html'
     success_url = reverse_lazy('workspaces:project_list')
 
-    def get_queryset(self):
-        return super().get_queryset().filter(user=self.request.user)
-
-class ProjectDeleteView(LoginRequiredMixin, DeleteView):
+class ProjectDeleteView(LoginRequiredMixin, OrganizationPermissionMixin, DeleteView):
     model = Project
     template_name = 'workspaces/project_confirm_delete.html'
     success_url = reverse_lazy('workspaces:project_list')
 
-    def get_queryset(self):
-        return super().get_queryset().filter(user=self.request.user)
+@login_required
+def project_toggle_archive(request, pk):
+    if request.method == 'POST':
+        project = get_object_or_404(Project, pk=pk, organization__members=request.user)
+        project.is_archived = not project.is_archived
+        project.save()
+        messages.success(request, f"Project '{project.name}' has been {'archived' if project.is_archived else 'unarchived'}.")
+    return redirect('workspaces:project_list')
 
 # --- Time Entry Views ---
 
-class TimeEntryListView(LoginRequiredMixin, ListView):
+class TimeEntryListView(LoginRequiredMixin, OrganizationPermissionMixin, ListView):
     model = TimeEntry
     template_name = 'workspaces/timeentry_list.html'
     context_object_name = 'entries'
     paginate_by = 15
 
     def get_paginate_by(self, queryset):
-        filter_keys = ['start_date', 'end_date', 'category', 'project', 'show_archived']
+        filter_keys = ['start_date', 'end_date', 'project', 'show_archived']
         if any(self.request.GET.get(key) for key in filter_keys):
             return None
         return self.paginate_by
 
-    def get_queryset(self):
-        queryset = super().get_queryset().filter(user=self.request.user)
-        # ... (rest of the queryset logic from tracker/views.py) ...
-        return queryset
-
-class TimeEntryCreateView(LoginRequiredMixin, CreateView):
+class TimeEntryCreateView(LoginRequiredMixin, OrganizationPermissionMixin, CreateView):
     model = TimeEntry
     form_class = TimeEntryManualForm
     template_name = 'workspaces/timeentry_create_form.html'
     success_url = reverse_lazy('workspaces:time_entry_list')
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user
-        return kwargs
 
     def form_valid(self, form):
         form.instance.user = self.request.user
@@ -92,19 +167,11 @@ class TimeEntryCreateView(LoginRequiredMixin, CreateView):
             TimeEntryImage.objects.create(time_entry=self.object, image=image_file)
         return response
 
-class TimeEntryUpdateView(LoginRequiredMixin, UpdateView):
+class TimeEntryUpdateView(LoginRequiredMixin, OrganizationPermissionMixin, UpdateView):
     model = TimeEntry
     form_class = TimeEntryManualForm
     template_name = 'workspaces/timeentry_update_form.html'
     success_url = reverse_lazy('workspaces:time_entry_list')
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user
-        return kwargs
-
-    def get_queryset(self):
-        return super().get_queryset().filter(user=self.request.user)
 
     def form_valid(self, form):
         time_details_were_edited = self.request.POST.get('time_details_edited_flag') == 'true'
@@ -115,13 +182,10 @@ class TimeEntryUpdateView(LoginRequiredMixin, UpdateView):
             TimeEntryImage.objects.create(time_entry=self.object, image=image_file)
         return response
 
-class TimeEntryDeleteView(LoginRequiredMixin, DeleteView):
+class TimeEntryDeleteView(LoginRequiredMixin, OrganizationPermissionMixin, DeleteView):
     model = TimeEntry
     template_name = 'workspaces/timeentry_confirm_delete.html'
     success_url = reverse_lazy('workspaces:time_entry_list')
-
-    def get_queryset(self):
-        return super().get_queryset().filter(user=self.request.user)
 
 # --- Bulk Action Views ---
 
@@ -216,7 +280,6 @@ def get_time_entry_details(request, pk):
             'success': True,
             'title': entry.title,
             'project': entry.project.name if entry.project else 'No Project',
-            'category': entry.get_category_display(),
             'date': entry.start_time.strftime('%b %-d, %Y'),
             'start_time': entry.start_time.strftime('%-I:%M:%S %p'),
             'end_time': entry.end_time.strftime('%-I:%M:%S %p') if entry.end_time else 'In Progress',
@@ -245,8 +308,60 @@ def delete_time_entry_image(request, pk):
 @login_required
 def get_projects_for_category(request):
     category = request.GET.get('category')
-    projects = Project.objects.filter(user=request.user)
+    projects = Project.objects.filter(organization__members=request.user)
     if category:
-        projects = projects.filter(category=category)
+        projects = projects.filter(contact__name=category)
     project_list = list(projects.values('id', 'name'))
     return JsonResponse(project_list, safe=False)
+
+class ManageContactsView(LoginRequiredMixin, OrganizationPermissionMixin, View):
+    def get(self, request, *args, **kwargs):
+        client_form = ClientForm()
+        category_form = CategoryForm()
+        clients = Contact.objects.filter(organization=request.user.organizations.first(), contact_type='CLIENT')
+        categories = Contact.objects.filter(organization=request.user.organizations.first(), contact_type='CATEGORY')
+        context = {
+            'client_form': client_form,
+            'category_form': category_form,
+            'clients': clients,
+            'categories': categories,
+        }
+        return render(request, 'workspaces/manage_contacts.html', context)
+
+    def post(self, request, *args, **kwargs):
+        if 'submit_client' in request.POST:
+            form = ClientForm(request.POST)
+            if form.is_valid():
+                contact = form.save(commit=False)
+                contact.organization = request.user.organizations.first()
+                contact.contact_type = 'CLIENT'
+                contact.save()
+                messages.success(request, 'Client created successfully.')
+                return redirect('workspaces:manage_contacts')
+        elif 'submit_category' in request.POST:
+            form = CategoryForm(request.POST)
+            if form.is_valid():
+                contact = form.save(commit=False)
+                contact.organization = request.user.organizations.first()
+                contact.contact_type = 'CATEGORY'
+                contact.save()
+                messages.success(request, 'Category created successfully.')
+                return redirect('workspaces:manage_contacts')
+        
+        # if form is not valid
+        client_form = ClientForm()
+        category_form = CategoryForm()
+        if 'submit_client' in request.POST:
+            client_form = form
+        elif 'submit_category' in request.POST:
+            category_form = form
+            
+        clients = Contact.objects.filter(organization=request.user.organizations.first(), contact_type='CLIENT')
+        categories = Contact.objects.filter(organization=request.user.organizations.first(), contact_type='CATEGORY')
+        context = {
+            'client_form': client_form,
+            'category_form': category_form,
+            'clients': clients,
+            'categories': categories,
+        }
+        return render(request, 'workspaces/manage_contacts.html', context)
