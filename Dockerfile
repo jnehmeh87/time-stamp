@@ -27,8 +27,12 @@ RUN pip install --no-cache /app/wheels/*
 # Copy application code
 COPY . .
 
+# Make entrypoint script executable
+COPY entrypoint.sh .
+RUN chmod +x entrypoint.sh
+
 # Expose the port Gunicorn will run on
 EXPOSE 8080
 
 # Run Gunicorn
-CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:$PORT time_stamp.wsgi:application"]
+ENTRYPOINT ["/app/entrypoint.sh"]
