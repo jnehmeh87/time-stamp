@@ -31,4 +31,4 @@ COPY . .
 EXPOSE 8080
 
 # Run Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:$PORT", "time_stamp.wsgi:application"]
+CMD ["sh", "-c", "gunicorn --bind 0.0.0.0:$PORT time_stamp.wsgi:application"]
