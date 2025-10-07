@@ -28,7 +28,7 @@ RUN pip install --no-cache /app/wheels/*
 COPY . .
 
 # Expose the port Gunicorn will run on
-EXPOSE 8000
+EXPOSE 8080
 
 # Run Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "time_stamp.wsgi:application"]
+CMD ["gunicorn", "--bind", "0.0.0.0:$PORT", "time_stamp.wsgi:application"]
