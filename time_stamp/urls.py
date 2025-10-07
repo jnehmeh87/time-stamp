@@ -15,7 +15,8 @@ urlpatterns = [
     path('accounts/', include('allauth.urls')),
 
     # Include your main application's URLs
-    path('', include('tracker.urls', namespace='tracker')),
+    path('tracker/', include('tracker.urls', namespace='tracker')),
+    path('', include('workspaces.urls', namespace='workspaces')),
 ]
 
 # This is standard practice for serving media files during development.

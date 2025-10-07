@@ -55,7 +55,7 @@
                                         <option value="{{ project.pk }}" data-category="{{ project.category }}">{{ project.name }}</option>
                                         {% endfor %}
                                     </select>
-                                    <a href="{% url 'tracker:project_create' %}?next={{ request.path }}" class="btn btn-outline-secondary" role="button">+</a>
+                                    <a href="{% url 'workspaces:project_create' %}?next={{ request.path }}" class="btn btn-outline-secondary" role="button">+</a>
                                 </div>
                             </div>
                             <div class="col-md-6 mb-3">
@@ -73,7 +73,87 @@
                                 <span class="mx-2 text-muted">Or</span>
                                 <hr class="flex-grow-1">
                             </div>
-                            <a href="{% url 'tracker:entry_create' %}" class="btn btn-outline-secondary btn-lg">Manual Entry</a>
+                            {% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Timer{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/index.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="container text-center">
+    <div id="timer-display" class="timer-display">00:00:00</div>
+    <div id="task-info" class="task-info mb-3">What are you working on?</div>
+
+    <div class="timer-controls mb-4">
+        <button id="start-timer-btn" class="btn btn-primary btn-lg">Start</button>
+        <button id="stop-timer-btn" class="btn btn-danger btn-lg" style="display: none;">Stop</button>
+        <button id="pause-resume-timer-btn" class="btn btn-secondary btn-lg" style="display: none;">Pause</button>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <form id="timer-form" class="input-group">
+                <input type="text" id="task-title" class="form-control" placeholder="Task description...">
+                <select id="task-category" class="form-select">
+                    <option value="work">Work</option>
+                    <option value="personal">Personal</option>
+                </select>
+                <select id="task-project" class="form-select">
+                    <!-- Projects will be loaded here by JavaScript -->
+                </select>
+                <button type="submit" class="btn btn-outline-secondary">Start</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a href="{% url 'workspaces:entry_create' %}" class="btn btn-outline-secondary btn-lg">Manual Entry</a>
+    </div>
+</div>
+
+<!-- Hidden form for AJAX calls -->
+<form id="timer-action-form" style="display: none;">
+    {% csrf_token %}
+    <input type="hidden" id="form-task-title" name="title">
+    <input type="hidden" id="form-task-category" name="category">
+    <input type="hidden" id="form-task-project" name="project_id">
+</form>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Pass initial data from Django to JavaScript
+    const taskInfo = {
+        csrfToken: "{{ csrf_token }}",
+        timerRunning: {{ timer_running|yesno:"true,false" }},
+        isPaused: {{ is_paused|yesno:"true,false" }},
+        startTime: "{{ start_time|date:"c" }}",
+        pausedDuration: {{ paused_duration|default:0 }},
+        lastPauseTime: "{{ last_pause_time|date:"c" }}",
+        activeTask: {
+            title: "{{ active_entry.title|default:''|escapejs }}",
+            category: "{{ active_entry.category|default:''|escapejs }}",
+            projectId: "{{ active_entry.project.id|default:'' }}"
+        },
+        allProjects: {{ all_projects|safe }},
+        latestWorkProjectId: "{{ latest_work_project_id }}",
+        latestPersonalProjectId: "{{ latest_personal_project_id }}",
+        urls: {
+            start: "{% url 'tracker:start_timer' %}",
+            stop: "{% url 'tracker:stop_timer' %}",
+            pause: "{% url 'tracker:pause_timer' %}",
+            resume: "{% url 'tracker:resume_timer' %}",
+            getProjects: "{% url 'workspaces:ajax_get_projects_for_category' %}",
+            projectCreate: "{% url 'workspaces:project_create' %}"
+        }
+    };
+</script>
+<script src="{% static 'js/index.js' %}"></script>
+{% endblock %}
                         </div>
                     </form>
                 {% endif %}

@@ -1,36 +1,36 @@
 {% extends "base.html" %}
 
-{% block title %}Confirm Archive Entries{% endblock %}
+{% block title %}Confirm Delete Entries{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8">
         <div class="card shadow-sm">
-            <div class="card-header bg-warning">
-                <h4 class="mb-0">Confirm Archive</h4>
+            <div class="card-header bg-danger text-white">
+                <h4 class="mb-0">Confirm Deletion</h4>
             </div>
             <div class="card-body">
-                <p>Are you sure you want to archive the following time entries?</p>
+                <p>Are you sure you want to permanently delete the following time entries?</p>
+                <p class="text-danger"><strong>This action cannot be undone.</strong></p>
                 
                 <ul class="list-group mb-3">
-                    {% for entry in entries_to_process %}
+                    {% for entry in entries_to_delete %}
                         <li class="list-group-item">{{ entry.title }} ({{ entry.start_time|date:"Y-m-d" }})</li>
                     {% empty %}
                         <li class="list-group-item">No entries selected.</li>
                     {% endfor %}
                 </ul>
 
-                {% if entries_to_process %}
-                <form method="post" action="{% url 'workspaces:entry_bulk_archive' %}">
+                {% if entries_to_delete %}
+                <form method="post" action="{% url 'workspaces:entry_bulk_delete' %}">
                     {% csrf_token %}
-                    <input type="hidden" name="action" value="archive">
                     <input type="hidden" name="preserved_filters" value="{{ preserved_filters }}">
-                    {% for entry in entries_to_process %}
+                    {% for entry in entries_to_delete %}
                         <input type="hidden" name="selected_entries" value="{{ entry.pk }}">
                     {% endfor %}
                     <div class="d-flex justify-content-end">
                         <a href="{% url 'workspaces:entry_list' %}?{{ preserved_filters }}" class="btn btn-secondary">Cancel</a>
-                        <button type="submit" class="btn btn-warning ms-2">Confirm Archive</button>
+                        <button type="submit" class="btn btn-danger ms-2">Confirm Deletion</button>
                     </div>
                 </form>
                 {% else %}

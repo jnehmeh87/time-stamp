@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Confirm Archive{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h1 class="h3 mb-0">Confirm Archive</h1>
+    </div>
+    <div class="card-body">
+        <p>Are you sure you want to archive the project <strong>"{{ project.name }}"</strong>?</p>
+        
+        <form action="{% url 'workspaces:project_toggle_archive' project.pk %}" method="post">
+            {% csrf_token %}
+            <div class="form-check mb-3">
+                <input class="form-check-input" type="checkbox" name="archive_entries" id="archive_entries">
+                <label class="form-check-label" for="archive_entries">
+                    Also archive all associated time entries.
+                </label>
+            </div>
+
+            <div class="alert alert-info" role="alert">
+                Archiving a project will hide it from the default list. You can view and unarchive it later by using the "Show Archived" filter.
+            </div>
+
+            <div class="d-flex gap-2">
+                <button type="submit" class="btn btn-warning">Yes, archive</button>
+                <a href="{% url 'workspaces:project_list' %}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

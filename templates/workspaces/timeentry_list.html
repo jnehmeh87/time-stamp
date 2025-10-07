@@ -1,0 +1,390 @@
+{% extends "base.html" %}
+{% load tracker_tags %}
+{% load static %}
+
+{% block title %}My Time Entries{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/timeentry_list.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>My Time Entries</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="btn-group" role="group" aria-label="View switcher">
+            <button type="button" class="btn btn-outline-secondary active" id="table-view-btn" title="List View">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-list-ul" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M5 11.5a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h9a.5.5 0 0 1 0 1h-9a.5.5 0 0 1-.5-.5m-3 1a1 1 0 1 0 0-2 1 1 0 0 0 0 2m0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2m0 4a1 1 0 1 0 0-2 1 1 0 0 0 0 2"/></svg>
+            </button>
+            <button type="button" class="btn btn-outline-secondary" id="card-view-btn" title="Card View">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-grid-3x2-gap-fill" viewBox="0 0 16 16"><path d="M1 4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1zM1 9a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1zm5 0a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1z"/></svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<!-- Desktop Filter (Visible on LG screens and up) -->
+<div class="card mb-4 d-none d-lg-block">
+    <div class="card-header">Filters</div>
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-lg-2">
+                <label for="category_desktop" class="form-label">Category</label>
+                <select name="category" id="category_desktop" class="form-select">
+                    <option value="">All</option>
+                    <option value="work" {% if form.category.value == 'work' %}selected{% endif %}>Work</option>
+                    <option value="personal" {% if form.category.value == 'personal' %}selected{% endif %}>Personal</option>
+                </select>
+            </div>
+            <div class="col-lg-2">
+                <label for="project_desktop" class="form-label">Project</label>
+                <select name="project" id="project_desktop" class="form-select" data-project-dates-url="{% url 'workspaces:ajax_get_project_dates' %}">
+                    <option value="">All Projects</option>
+                    {% for project in all_projects %}
+                        <option value="{{ project.pk }}" data-category="{{ project.category }}" {% if project.pk|stringformat:"s" == form.project.value|stringformat:"s" %}selected{% endif %}>
+                            {{ project.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-lg-2">
+                <label for="start_date_desktop" class="form-label">Start Date</label>
+                <input type="date" name="start_date" id="start_date_desktop" class="form-control" value="{{ form.start_date.value|default:'' }}">
+            </div>
+            <div class="col-lg-2">
+                <label for="end_date_desktop" class="form-label">End Date</label>
+                <input type="date" name="end_date" id="end_date_desktop" class="form-control" value="{{ form.end_date.value|default:'' }}">
+            </div>
+            <div class="col-lg-2">
+                <div class="form-check form-switch pb-1">
+                    <input class="form-check-input" type="checkbox" role="switch" name="show_archived" id="show_archived_desktop" value="on" {% if form.show_archived.value %}checked{% endif %} onchange="this.form.submit()">
+                    <label class="form-check-label" for="show_archived_desktop">
+                        Show Archived
+                    </label>
+                </div>
+            </div>
+            <div class="col-lg-2">
+                <button type="submit" class="btn btn-primary w-100">Filter</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Mobile/Tablet Filter (Hidden on LG screens and up) -->
+<div class="card mb-4 d-lg-none">
+    <div class="card-header" id="filter-heading-mobile">
+        <h2 class="mb-0">
+            <button class="btn btn-link btn-block text-left text-decoration-none d-flex justify-content-between w-100" type="button" data-bs-toggle="collapse" data-bs-target="#filter-collapse-mobile" aria-expanded="false" aria-controls="filter-collapse-mobile">
+                <span class="h5 mb-0">Filters</span>
+                <span class="filter-toggle-icon">+</span>
+            </button>
+        </h2>
+    </div>
+    <div id="filter-collapse-mobile" class="collapse">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-12">
+                    <label for="start_date_mobile" class="form-label">Start Date</label>
+                    <input type="date" name="start_date" id="start_date_mobile" class="form-control" value="{{ form.start_date.value|default:'' }}">
+                </div>
+                <div class="col-12">
+                    <label for="end_date_mobile" class="form-label">End Date</label>
+                    <input type="date" name="end_date" id="end_date_mobile" class="form-control" value="{{ form.end_date.value|default:'' }}">
+                </div>
+                <div class="col-12">
+                    <label for="category_mobile" class="form-label">Category</label>
+                    <select name="category" id="category_mobile" class="form-select">
+                        <option value="">All</option>
+                        <option value="work" {% if form.category.value == 'work' %}selected{% endif %}>Work</option>
+                        <option value="personal" {% if form.category.value == 'personal' %}selected{% endif %}>Personal</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label for="project_mobile" class="form-label">Project</label>
+                    <select name="project" id="project_mobile" class="form-select" 
+                            data-project-dates-url="{% url 'workspaces:ajax_get_project_dates' %}"
+                            data-latest-work-project="{{ latest_work_project_id|default:'' }}" 
+                            data-latest-personal-project="{{ latest_personal_project_id|default:'' }}">
+                        <option value="">All Projects</option>
+                        {% for project in all_projects %}
+                            <option value="{{ project.pk }}" data-category="{{ project.category }}" {% if project.pk|stringformat:"s" == form.project.value|stringformat:"s" %}selected{% endif %}>
+                                {{ project.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" role="switch" name="show_archived" id="show_archived_mobile" value="on" {% if form.show_archived.value %}checked{% endif %} onchange="this.form.submit()">
+                        <label class="form-check-label" for="show_archived_mobile">
+                            Show Archived
+                        </label>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <button type="submit" class="btn btn-primary w-100">Filter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<form method="post" id="bulk-action-form">
+    {% csrf_token %}
+    <input type="hidden" name="preserved_filters" value="{{ request.GET.urlencode }}">
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="d-flex justify-content-center justify-content-sm-end align-items-center mb-2 gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    {% if form.show_archived.value %}
+                    <button type="submit" class="btn btn-sm btn-secondary archive-action-btn px-1 px-sm-2" id="bulk-unarchive-btn" disabled formaction="{% url 'workspaces:entry_bulk_unarchive_confirm' %}"><i class="fas fa-box-open me-1"></i>Unarchive</button>
+                    {% else %}
+                    <button type="submit" class="btn btn-sm btn-warning archive-action-btn px-1 px-sm-2" id="bulk-archive-btn" disabled formaction="{% url 'workspaces:entry_bulk_archive_confirm' %}"><i class="fas fa-archive me-1"></i>Archive</button>
+                    {% endif %}
+                    <button type="submit" class="btn btn-sm btn-danger px-1 px-sm-2" id="bulk-delete-btn" disabled formaction="{% url 'workspaces:entry_bulk_delete_confirm' %}"><i class="fas fa-trash-alt me-1"></i>Delete</button>
+                    <a href="{% url 'workspaces:entry_create' %}" class="btn btn-sm btn-primary px-1 px-sm-2">
+                        <i class="fas fa-plus me-1"></i> New Entry
+                    </a>
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="select-all-entries">
+                    <label class="form-check-label" for="select-all-entries">
+                        Select all
+                    </label>
+                </div>
+                <small class="text-body-tertiary fst-italic">
+                    <span title="Time was edited"><i class="fas fa-pen"></i> = Edited</span>
+                    <span class="ms-2" title="Manually created"><i class="fas fa-plus-circle"></i> = Manual</span>
+                </small>
+            </div>
+            <hr>
+            <!-- Table View Container -->
+            <div id="table-view-container">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr id="sortable-headers">
+                                <th data-column-id="checkbox"></th><!-- Checkbox column -->
+                                <th class="text-center" data-column-id="status">
+                                    <a href="?{% sort_url 'is_manual' %}" class="text-decoration-none text-reset">
+                                        Status {% if sort_by == 'is_manual' %}{% if sort_dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}{% endif %}
+                                    </a>
+                                </th>
+                                <th class="text-center" data-column-id="task">
+                                    <a href="?{% sort_url 'title' %}" class="text-decoration-none text-reset">
+                                        Task {% if sort_by == 'title' %}{% if sort_dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}{% endif %}
+                                    </a>
+                                </th>
+                                <th class="text-center" data-column-id="project">
+                                     <a href="?{% sort_url 'project__name' %}" class="text-decoration-none text-reset">
+                                        Project {% if sort_by == 'project__name' %}{% if sort_dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}{% endif %}
+                                    </a>
+                                </th>
+                                <th class="text-center" data-column-id="date">
+                                     <a href="?{% sort_url 'date' %}" class="text-decoration-none text-reset">
+                                        Date {% if sort_by == 'date' %}{% if sort_dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}{% endif %}
+                                    </a>
+                                </th>
+                                <th class="text-center" data-column-id="start_time">Time Details</th>
+                                <th class="text-center" data-column-id="duration">
+                                     <a href="?{% sort_url 'duration' %}" class="text-decoration-none text-reset">
+                                        Duration {% if sort_by == 'duration' %}{% if sort_dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}{% endif %}
+                                    </a>
+                                </th>
+                                <th class="text-center" data-column-id="paused_time">
+                                     <a href="?{% sort_url 'paused_duration' %}" class="text-decoration-none text-reset">
+                                        Paused Time {% if sort_by == 'paused_duration' %}{% if sort_dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}{% endif %}
+                                    </a>
+                                </th>
+                                <th class="text-center" data-column-id="category">
+                                     <a href="?{% sort_url 'category' %}" class="text-decoration-none text-reset">
+                                        Category {% if sort_by == 'category' %}{% if sort_dir == 'asc' %}&uarr;{% else %}&darr;{% endif %}{% endif %}
+                                    </a>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body">
+                            {% for entry in entries %}
+                            <tr class="{% if entry.is_archived %}table-warning{% endif %}">
+                                <td class="text-center" data-column-id="checkbox"><input class="form-check-input entry-checkbox" type="checkbox" name="selected_entries" value="{{ entry.pk }}"></td>
+                                <td class="text-center" data-column-id="status">
+                                    {% if entry.is_manual %}
+                                        <i class="fas fa-plus-circle text-muted" title="This entry was manually created."></i>
+                                    {% elif entry.was_edited %}
+                                        <i class="fas fa-pencil-alt text-muted" title="This entry's time was edited."></i>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center" data-column-id="task">
+                                    <a href="#" class="text-decoration-none view-details-btn" 
+                                       data-entry-id="{{ entry.pk }}" 
+                                       data-bs-toggle="modal" 
+                                       data-bs-target="#entryDetailsModal">
+                                        {{ entry.title }}
+                                    </a>
+                                </td>
+                                <td class="text-center" data-column-id="project">{{ entry.project.name|default:"-" }}</td>
+                                <td class="text-center" data-column-id="date">{{ entry.start_time|date:"D j/n/Y" }}</td>
+                                <td class="text-center" data-column-id="start_time">{{ entry.start_time|date:"g:i A" }} - {{ entry.end_time|date:"g:i A" }}</td>
+                                <td class="text-center" data-column-id="duration">{{ entry.duration|human_duration }}</td>
+                                <td class="text-center" data-column-id="paused_time">{{ entry.paused_duration|human_duration }}</td>
+                                <td class="text-center" data-column-id="category">{{ entry.get_category_display }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="9" class="text-center">No time entries found.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Card View Container -->
+            <div id="card-view-container" class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3" style="display: none;">
+                {% for entry in entries %}
+                <div class="col">
+                    <div class="card h-100 clickable-card view-details-btn {% if entry.is_archived %}bg-warning bg-opacity-25{% endif %}" 
+                         data-entry-id="{{ entry.pk }}" 
+                         data-bs-toggle="modal" 
+                         data-bs-target="#entryDetailsModal">
+                        {% with entry.images.first as first_image %}
+                            {% if first_image %}
+                                <img src="{{ first_image.image.url }}" class="card-img-top" alt="{{ entry.title }} image" style="height: 180px; object-fit: cover;">
+                            {% endif %}
+                        {% endwith %}
+                        <div class="card-header d-flex justify-content-between align-items-start">
+                            <input class="form-check-input entry-checkbox mt-1" type="checkbox" name="selected_entries" value="{{ entry.pk }}" onclick="event.stopPropagation();">
+                            <div class="flex-grow-1 ms-2">
+                                <h5 class="mb-0">{{ entry.title }}</h5>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">
+                                <strong>Project:</strong> {{ entry.project.name|default:"-" }}<br>
+                                <strong>Category:</strong> {{ entry.get_category_display }}<br>
+                                <span class="badge bg-success">Duration: {{ entry.duration|human_duration }}</span>
+                                {% if entry.paused_duration %}
+                                  |  <span class="badge bg-warning text-dark">Pause: {{ entry.paused_duration|human_duration }}</span>
+                                {% endif %}
+                                {% if entry.is_manual %}
+                                  | <span class="badge bg-primary text-white" title="Manually created"><i class="fas fa-plus-circle"></i> Manual</span>
+                                {% elif entry.was_edited %}
+                                  | <span class="badge bg-info text-dark" title="Time was edited"><i class="fas fa-pen"></i> Edited</span>
+                                {% endif %}
+                            </p>
+                            <p class="card-text small text-muted">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" class="bi bi-calendar-event me-1" viewBox="0 0 16 16"><path d="M11 6.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5z"/><path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5M1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4z"/></svg>
+                                {{ entry.start_time|date:"D, j M Y" }}
+                                <br>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" class="bi bi-clock me-1" viewBox="0 0 16 16"><path d="M8 3.5a.5.5 0 0 0-1 0V9a.5.5 0 0 0 .252.434l3.5 2a.5.5 0 0 0 .496-.868L8 8.71z"/><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16m7-8A7 7 0 1 1 1 8a7 7 0 0 1 14 0"/></svg>
+                                {{ entry.start_time|date:"g:i:s A" }} - {{ entry.end_time|date:"g:i:s A" }}
+                                <br>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                    <div class="col-12">
+                        <p class="text-center">No time entries found.</p>
+                    </div>
+                {% endfor %}
+            </div>
+
+        </div>
+    </div>
+</form>
+
+{% if is_paginated %}
+<nav aria-label="Page navigation">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?{% url_replace page=1 %}" aria-label="First">
+                    <span aria-hidden="true">&laquo;&laquo;</span>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?{% url_replace page=page_obj.previous_page_number %}" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+        {% endif %}
+
+        <li class="page-item disabled">
+            <span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        </li>
+
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?{% url_replace page=page_obj.next_page_number %}" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?{% url_replace page=page_obj.paginator.num_pages %}" aria-label="Last">
+                    <span aria-hidden="true">&raquo;&raquo;</span>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<!-- Details Modal -->
+<div class="modal fade" id="entryDetailsModal" tabindex="-1" aria-labelledby="entryDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="entryDetailsModalLabel">Time Entry Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="modal-spinner" class="text-center">
+                    <div class="spinner-border" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                <div id="modal-content-area" class="d-none">
+                    <h4 id="modal-title"></h4>
+                    <p>
+                        <strong>Project:</strong> <span id="modal-project"></span><br>
+                        <strong>Category:</strong> <span id="modal-category"></span>
+                    </p>
+                    <hr>
+                    <p>
+                        <strong>Start:</strong> <span id="modal-start-time"></span><br>
+                        <strong>End:</strong> <span id="modal-end-time"></span><br>
+                        <strong>Duration:</strong> <span id="modal-duration"></span><br>
+                        <strong>Pause:</strong> <span id="modal-pause"></span>
+                    </p>
+                    <hr>
+                    <h5>Description</h5>
+                    <p id="modal-description"></p>
+                    <h5>Notes</h5>
+                    <p id="modal-notes"></p>
+                    
+                    <div id="modal-images-section">
+                        <h5>Images</h5>
+                        <div id="modal-images-gallery" class="row">
+                            <!-- Images will be injected here by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="#" id="modal-edit-button" class="btn btn-primary">Edit this Entry</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+<script src="{% static 'js/timeentry_list.js' %}"></script>
+{% endblock %}

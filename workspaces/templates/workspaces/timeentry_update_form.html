@@ -2,14 +2,14 @@
 {% load crispy_forms_tags %}
 {% load static %}
 
-{% block title %}{% if object %}Edit Time Entry{% else %}New Manual Entry{% endif %}{% endblock %}
+{% block title %}Edit Time Entry{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8">
         <div class="card">
             <div class="card-header">
-                <h3>{% if object %}Edit Time Entry{% else %}New Manual Entry{% endif %}</h3>
+                <h3>Edit Time Entry</h3>
             </div>
             <div class="card-body">
                 <form method="post" enctype="multipart/form-data">
@@ -29,7 +29,6 @@
                     <hr>
 
                     <!-- Time Details Section -->
-                    {% if object %}
                     <div id="time-details-display">
                         <h5>Time Details</h5>
                         <p>
@@ -40,10 +39,9 @@
                         </p>
                         <button type="button" id="edit-time-btn" class="btn btn-secondary btn-sm mb-3">Edit Time Details</button>
                     </div>
-                    {% endif %}
 
-                    <div id="time-details-edit" class="{% if object %}d-none{% endif %}">
-                        <h5>{% if object %}Edit Time Details{% else %}Time Details{% endif %}</h5>
+                    <div id="time-details-edit" class="d-none">
+                        <h5>Edit Time Details</h5>
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 {{ form.start_time|as_crispy_field }}
@@ -82,7 +80,7 @@
 
                     <div class="d-flex justify-content-end">
                         <a href="{% url 'workspaces:entry_list' %}" class="btn btn-secondary me-2">Cancel</a>
-                        <button type="submit" class="btn btn-primary">Save Entry</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
                     </div>
                 </form>
             </div>
@@ -92,5 +90,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/timeentry_form.js' %}"></script>
+<script src="{% static 'js/timeentry_update_form.js' %}"></script>
 {% endblock %}

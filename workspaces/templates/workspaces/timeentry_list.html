@@ -138,12 +138,133 @@
             <div class="d-flex justify-content-center justify-content-sm-end align-items-center mb-2 gap-2">
                 <div class="d-flex align-items-center gap-2">
                     {% if form.show_archived.value %}
-                    <button type="submit" class="btn btn-sm btn-secondary archive-action-btn px-1 px-sm-2" id="bulk-unarchive-btn" disabled formaction="{% url 'tracker:entry_bulk_unarchive_confirm' %}"><i class="fas fa-box-open me-1"></i>Unarchive</button>
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Time Entries{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'css/timeentry_list.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Time Entries</h2>
+    <a href="{% url 'workspaces:entry_create' %}" class="btn btn-primary">Add Manual Entry</a>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        Filters
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-3">{{ form.start_date.label_tag }} {{ form.start_date }}</div>
+            <div class="col-md-3">{{ form.end_date.label_tag }} {{ form.end_date }}</div>
+            <div class="col-md-2">{{ form.category.label_tag }} {{ form.category }}</div>
+            <div class="col-md-2">{{ form.project.label_tag }} {{ form.project }}</div>
+            <div class="col-md-2 d-flex align-items-center">{{ form.show_archived }}</div>
+            <div class="col-12"><button type="submit" class="btn btn-primary">Filter</button></div>
+        </form>
+    </div>
+</div>
+
+<form method="post" id="bulk-action-form">
+    {% csrf_token %}
+    <div class="table-responsive">
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th><input type="checkbox" id="select-all-entries"></th>
+                    <th><a href="?sort_by=task&sort_dir={{ next_sort_dir }}">Task</a></th>
+                    <th><a href="?sort_by=project&sort_dir={{ next_sort_dir }}">Project</a></th>
+                    <th><a href="?sort_by=date&sort_dir={{ next_sort_dir }}">Date</a></th>
+                    <th><a href="?sort_by=start_time&sort_dir={{ next_sort_dir }}">Start Time</a></th>
+                    <th><a href="?sort_by=duration&sort_dir={{ next_sort_dir }}">Duration</a></th>
+                    <th><a href="?sort_by=paused_time&sort_dir={{ next_sort_dir }}">Paused</a></th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in entries %}
+                <tr>
+                    <td><input type="checkbox" name="selected_entries" value="{{ entry.pk }}" class="entry-checkbox"></td>
+                    <td>{{ entry.title }}</td>
+                    <td>{{ entry.project.name|default:"N/A" }}</td>
+                    <td>{{ entry.start_time|date:"Y-m-d" }}</td>
+                    <td>{{ entry.start_time|time:"H:i" }}</td>
+                    <td>{{ entry.duration|default:"-" }}</td>
+                    <td>{{ entry.paused_duration|default:"-" }}</td>
+                    <td>
+                        <a href="{% url 'workspaces:entry_update' entry.pk %}" class="btn btn-sm btn-info">Edit</a>
+                        <a href="{% url 'workspaces:entry_delete' entry.pk %}" class="btn btn-sm btn-danger">Delete</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="8" class="text-center">No time entries found.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="d-flex justify-content-between align-items-center mt-3">
+        <div>
+            <button type="submit" class="btn btn-sm btn-secondary" id="bulk-unarchive-btn" disabled formaction="{% url 'workspaces:entry_bulk_unarchive_confirm' %}">Unarchive</button>
+            <button type="submit" class="btn btn-sm btn-warning" id="bulk-archive-btn" disabled formaction="{% url 'tracker:entry_bulk_archive_confirm' %}">Archive</button>
+            <button type="submit" class="btn btn-sm btn-danger" id="bulk-delete-btn" disabled formaction="{% url 'tracker:entry_bulk_delete_confirm' %}">Delete</button>
+        </div>
+        {% if is_paginated %}
+        <nav>
+            <ul class="pagination">
+                {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+                {% endif %}
+                <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+                {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAll = document.getElementById('select-all-entries');
+    const checkboxes = document.querySelectorAll('.entry-checkbox');
+    const bulkButtons = [
+        document.getElementById('bulk-unarchive-btn'),
+        document.getElementById('bulk-archive-btn'),
+        document.getElementById('bulk-delete-btn')
+    ];
+
+    function toggleBulkButtons() {
+        const anyChecked = Array.from(checkboxes).some(c => c.checked);
+        bulkButtons.forEach(button => button.disabled = !anyChecked);
+    }
+
+    selectAll.addEventListener('change', function() {
+        checkboxes.forEach(checkbox => checkbox.checked = selectAll.checked);
+        toggleBulkButtons();
+    });
+
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', toggleBulkButtons);
+    });
+
+    // Initial state
+    toggleBulkButtons();
+});
+</script>
+{% endblock %}
+
                     {% else %}
                     <button type="submit" class="btn btn-sm btn-warning archive-action-btn px-1 px-sm-2" id="bulk-archive-btn" disabled formaction="{% url 'tracker:entry_bulk_archive_confirm' %}"><i class="fas fa-archive me-1"></i>Archive</button>
                     {% endif %}
                     <button type="submit" class="btn btn-sm btn-danger px-1 px-sm-2" id="bulk-delete-btn" disabled formaction="{% url 'tracker:entry_bulk_delete_confirm' %}"><i class="fas fa-trash-alt me-1"></i>Delete</button>
-                    <a href="{% url 'tracker:entry_create' %}" class="btn btn-sm btn-primary px-1 px-sm-2">
+                    <a href="{% url 'workspaces:entry_create' %}" class="btn btn-sm btn-primary px-1 px-sm-2">
                         <i class="fas fa-plus me-1"></i> New Entry
                     </a>
                 </div>

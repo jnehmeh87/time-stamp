@@ -14,6 +14,9 @@ load_dotenv()
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+with open(os.path.join(BASE_DIR, 'VERSION')) as f:
+    APP_VERSION = f.read().strip()
+
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-default-key-for-development')
@@ -49,9 +52,13 @@ INSTALLED_APPS = [
     'crispy_bootstrap5',
 
     # Local
+    'users.apps.UsersConfig',
     'tracker.apps.TrackerConfig',
+    'workspaces',
 
 ]
+
+AUTH_USER_MODEL = 'users.CustomUser'
 
 # Add this setting. It's required by django-allauth.
 SITE_ID = 1
@@ -83,6 +90,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'time_stamp.context_processors.version',
             ],
         },
     },

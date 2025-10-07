@@ -2,7 +2,8 @@ from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Permission
-from .models import Project, TimeEntry, Profile, TimeEntryImage
+from workspaces.models import Project, TimeEntry, TimeEntryImage
+from users.models import CustomUser, Organization
 from django.utils import timezone
 from PIL import Image
 from django.core.files import File
@@ -14,7 +15,22 @@ from datetime import timedelta
 from unittest.mock import patch, MagicMock
 from decimal import Decimal, InvalidOperation
 from .utils import format_duration_hms, render_to_pdf
-from .forms import TimeEntryManualForm
+from workspaces.forms import TimeEntryManualForm
+from tracker.views import _get_date_range, _get_base_queryset, _calculate_summary_data, _get_context_data, _get_translation_context, _get_translated_entries, _generate_translated_pdf_response, _generate_translated_csv_response
+
+User = get_user_model()
+
+class ReportGenerationTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='testuser', password='password')
+        self.project = Project.objects.create(user=self.user, name='Test Project')
+        TimeEntry.objects.create(user=self.user, project=self.project, title='Test Entry', start_time='2023-10-26T10:00:00Z', end_time='2023-10-26T11:00:00Z')
+
+    def test_report_generation(self):
+        self.client.login(username='testuser', password='password')
+        response = self.client.get('/reports/', {'start_date': '2023-10-01', 'end_date': '2023-10-31', 'project': self.project.id})
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Test Entry')
 
 class ProjectListViewTest(TestCase):
     def setUp(self):
@@ -23,12 +39,14 @@ class ProjectListViewTest(TestCase):
             username='testuser',
             password='testpassword'
         )
+        self.organization = Organization.objects.create(name='Test Organization')
+        self.organization.members.add(self.user)
         # Create a test project associated with the user
         self.project = Project.objects.create(
             name='Test Work Project',
             description='A test project for work.',
             category='work',
-            user=self.user
+            organization=self.organization
         )
 
     def test_project_list_view_requires_login(self):
@@ -37,7 +55,7 @@ class ProjectListViewTest(TestCase):
         """
         # The URL name 'tracker:project_list' is based on your template paths.
         # If your URL is named differently, you may need to adjust this.
-        url = reverse('tracker:project_list')
+        url = reverse('workspaces:project_list')
         response = self.client.get(url)
 
         # Check that the user is redirected (status code 302) to the login page.
@@ -51,20 +69,19 @@ class ProjectListViewTest(TestCase):
         # Log the test user in
         self.client.login(username='testuser', password='testpassword')
 
-        url = reverse('tracker:project_list')
+        url = reverse('workspaces:project_list')
         response = self.client.get(url)
 
         # Check that the page loads successfully (status code 200).
         self.assertEqual(response.status_code, 200)
-        # Check that the correct template is used.
-        self.assertTemplateUsed(response, 'tracker/project_list.html')
+        self.assertTemplateUsed(response, 'workspaces/project_list.html')
 
     def test_project_is_displayed_on_list_page(self):
         """
         Test that a created project's name is visible on the project list page.
         """
         self.client.login(username='testuser', password='testpassword')
-        url = reverse('tracker:project_list')
+        url = reverse('workspaces:project_list')
         response = self.client.get(url)
 
         # Check that the response contains the name of our test project.
@@ -78,15 +95,17 @@ class ProjectCreateViewTest(TestCase):
             username='testuser',
             password='testpassword'
         )
+        self.organization = Organization.objects.create(name='Test Organization')
+        self.organization.members.add(self.user)
         # Log the user in for all tests in this class
         self.client.login(username='testuser', password='testpassword')
-        self.url = reverse('tracker:project_create')
+        self.url = reverse('workspaces:project_create')
 
     def test_create_project_page_loads(self):
         """Test that the project creation page loads correctly."""
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'tracker/project_form.html')
+        self.assertTemplateUsed(response, 'workspaces/project_form.html')
 
     def test_create_project_successfully(self):
         """Test that a new project can be created via a POST request."""
@@ -99,33 +118,29 @@ class ProjectCreateViewTest(TestCase):
         response = self.client.post(self.url, data=form_data)
 
         # Check that we are redirected to the project list page after creation
-        self.assertRedirects(response, reverse('tracker:project_list'))
+        self.assertRedirects(response, reverse('workspaces:project_list'))
 
         # Check that the project was actually created in the database
         self.assertTrue(Project.objects.filter(name='New Test Project').exists())
 
-        # Check that the project is associated with the correct user
-        new_project = Project.objects.get(name='New Test Project')
-        self.assertEqual(new_project.user, self.user)
-
     def test_delete_project_view(self):
         """Test that a project can be deleted."""
         project_to_delete = Project.objects.create(
-            user=self.user, name='Will be deleted'
+            organization=self.organization, name='Will be deleted'
         )
-        delete_url = reverse('tracker:project_delete', kwargs={'pk': project_to_delete.pk})
+        delete_url = reverse('workspaces:project_delete', kwargs={'pk': project_to_delete.pk})
         self.assertTrue(Project.objects.filter(pk=project_to_delete.pk).exists())
         response = self.client.post(delete_url)
-        self.assertRedirects(response, reverse('tracker:project_list'))
+        self.assertRedirects(response, reverse('workspaces:project_list'))
         self.assertFalse(Project.objects.filter(pk=project_to_delete.pk).exists())
 
     def test_delete_project_get_confirm_page(self):
         """Test that the project delete confirmation page loads."""
-        project_to_delete = Project.objects.create(user=self.user, name='Confirm Delete')
-        delete_url = reverse('tracker:project_delete', kwargs={'pk': project_to_delete.pk})
+        project_to_delete = Project.objects.create(organization=self.organization, name='Confirm Delete')
+        delete_url = reverse('workspaces:project_delete', kwargs={'pk': project_to_delete.pk})
         response = self.client.get(delete_url)
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'tracker/project_confirm_delete.html')
+        self.assertTemplateUsed(response, 'workspaces/project_confirm_delete.html')
 
     def test_create_project_with_next_url(self):
         """Test that creating a project with a 'next' param redirects correctly."""
@@ -152,10 +167,12 @@ class TimerViewsTest(TestCase):
             username='testuser',
             password='testpassword'
         )
+        self.organization = Organization.objects.create(name='Test Organization')
+        self.organization.members.add(self.user)
         self.client.login(username='testuser', password='testpassword')
         self.project = Project.objects.create(
             name='Test Project',
-            user=self.user
+            organization=self.organization
         )
         self.start_url = reverse('tracker:start_timer')
         self.stop_url = reverse('tracker:stop_timer')
@@ -195,7 +212,7 @@ class TimerViewsTest(TestCase):
     def test_stop_timer_running(self):
         entry = TimeEntry.objects.create(user=self.user, title='Test Title', project=self.project, start_time=timezone.now())
         response = self.client.post(self.stop_url)
-        self.assertRedirects(response, reverse('tracker:entry_update', kwargs={'pk': entry.pk}))
+        self.assertRedirects(response, reverse('workspaces:entry_update', kwargs={'pk': entry.pk}))
         self.assertFalse(TimeEntry.objects.filter(user=self.user, end_time__isnull=True).exists())
 
     def test_stop_timer_not_running(self):
@@ -238,7 +255,7 @@ class TimerViewsTest(TestCase):
             last_pause_time=pause_time
         )
         response = self.client.post(self.stop_url)
-        self.assertRedirects(response, reverse('tracker:entry_update', kwargs={'pk': entry.pk}))
+        self.assertRedirects(response, reverse('workspaces:entry_update', kwargs={'pk': entry.pk}))
         entry.refresh_from_db()
         self.assertIsNotNone(entry.end_time)
         self.assertFalse(entry.is_paused)
@@ -265,12 +282,12 @@ class TimeEntryUpdateViewTest(TestCase):
             start_time=timezone.now() - timedelta(hours=1),
             end_time=timezone.now()
         )
-        self.url = reverse('tracker:entry_update', kwargs={'pk': self.entry.pk})
+        self.url = reverse('workspaces:entry_update', kwargs={'pk': self.entry.pk})
 
     def test_update_view_loads(self):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'tracker/timeentry_update_form.html')
+        self.assertTemplateUsed(response, 'workspaces/timeentry_update_form.html')
 
     def test_update_entry_successfully(self):
         form_data = {
@@ -281,7 +298,7 @@ class TimeEntryUpdateViewTest(TestCase):
             'end_time': self.entry.end_time.strftime('%Y-%m-%dT%H:%M'),
         }
         response = self.client.post(self.url, data=form_data)
-        self.assertRedirects(response, reverse('tracker:entry_list'))
+        self.assertRedirects(response, reverse('workspaces:entry_list'))
         self.entry.refresh_from_db()
         self.assertEqual(self.entry.title, 'Updated Title')
 
@@ -295,7 +312,7 @@ class TimeEntryUpdateViewTest(TestCase):
             'time_details_edited_flag': 'true',
         }
         response = self.client.post(self.url, data=form_data)
-        self.assertRedirects(response, reverse('tracker:entry_list'))
+        self.assertRedirects(response, reverse('workspaces:entry_list'))
         self.entry.refresh_from_db()
         self.assertTrue(self.entry.was_edited)
 
@@ -320,7 +337,7 @@ class TimeEntryUpdateViewTest(TestCase):
             }
             response = self.client.post(self.url, data={**form_data, 'images': f})
 
-        self.assertRedirects(response, reverse('tracker:entry_list'))
+        self.assertRedirects(response, reverse('workspaces:entry_list'))
         self.assertEqual(self.entry.images.count(), 1)
 
         # Clean up the test image
@@ -330,7 +347,7 @@ class TimeEntryCreateViewTest(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(username='testuser', password='testpassword')
         self.client.login(username='testuser', password='testpassword')
-        self.url = reverse('tracker:entry_create')
+        self.url = reverse('workspaces:entry_create')
 
     def test_create_entry_with_image(self):
         image = Image.new('RGB', (100, 100), color='green')
@@ -346,7 +363,7 @@ class TimeEntryCreateViewTest(TestCase):
             }
             response = self.client.post(self.url, data={**form_data, 'images': f})
 
-        self.assertRedirects(response, reverse('tracker:entry_list'))
+        self.assertRedirects(response, reverse('workspaces:entry_list'))
         entry = TimeEntry.objects.get(title='Create With Image')
         self.assertEqual(entry.images.count(), 1)
         os.remove(image_path)
@@ -360,19 +377,19 @@ class TimeEntryDeleteViewTest(TestCase):
             title='Entry to Delete',
             start_time=timezone.now()
         )
-        self.url = reverse('tracker:entry_delete', kwargs={'pk': self.entry.pk})
+        self.url = reverse('workspaces:entry_delete', kwargs={'pk': self.entry.pk})
 
     def test_delete_view_get_request(self):
         """Test that a GET request to the delete view shows the confirmation page."""
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'tracker/timeentry_confirm_delete.html')
+        self.assertTemplateUsed(response, 'workspaces/timeentry_confirm_delete.html')
         self.assertContains(response, 'Are you sure you want to delete')
 
     def test_delete_view_post_request(self):
         """Test that a POST request deletes the entry."""
         response = self.client.post(self.url)
-        self.assertRedirects(response, reverse('tracker:entry_list'))
+        self.assertRedirects(response, reverse('workspaces:entry_list'))
         self.assertFalse(TimeEntry.objects.filter(pk=self.entry.pk).exists())
 
 class TimeEntryListViewTest(TestCase):
@@ -381,10 +398,12 @@ class TimeEntryListViewTest(TestCase):
             username='testuser',
             password='testpassword'
         )
+        self.organization = Organization.objects.create(name='Test Organization')
+        self.organization.members.add(self.user)
         self.client.login(username='testuser', password='testpassword')
         self.project = Project.objects.create(
             name='Test Project',
-            user=self.user,
+            organization=self.organization,
             category='work'
         )
         self.entry1 = TimeEntry.objects.create(
@@ -404,12 +423,12 @@ class TimeEntryListViewTest(TestCase):
             end_time=timezone.now() - timezone.timedelta(days=1),
             is_archived=True
         )
-        self.url = reverse('tracker:entry_list')
+        self.url = reverse('workspaces:entry_list')
 
     def test_list_view_loads(self):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'tracker/timeentry_list.html')
+        self.assertTemplateUsed(response, 'workspaces/timeentry_list.html')
 
     def test_filter_by_date(self):
         response = self.client.get(self.url, {
@@ -606,12 +625,12 @@ class ProfileViewTest(TestCase):
         self.profile.save()
         
         self.client.login(username='testuser', password='testpassword')
-        self.url = reverse('tracker:profile')
+        self.url = reverse('users:profile')
 
     def test_profile_view_get(self):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'tracker/profile.html')
+        self.assertTemplateUsed(response, 'users/profile.html')
         self.assertContains(response, 'test@example.com')
         self.assertContains(response, 'Sweden') # From country code 'SE'
 
@@ -756,13 +775,13 @@ class TerminateAccountViewTest(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(username='testuser', password='testpassword')
         self.client.login(username='testuser', password='testpassword')
-        self.url = reverse('tracker:terminate_account_confirm')
+        self.url = reverse('users:terminate_account_confirm')
 
     def test_terminate_account_get(self):
         """Test that the confirmation page is rendered on GET."""
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'tracker/terminate_account_confirm.html')
+        self.assertTemplateUsed(response, 'users/terminate_account_confirm.html')
         # Check that the user still exists
         self.assertTrue(get_user_model().objects.filter(id=self.user.id).exists())
 
@@ -796,23 +815,23 @@ class BulkActionViewsTest(TestCase):
             end_time=timezone.now(),
             is_archived=True
         )
-        self.delete_confirm_url = reverse('tracker:entry_bulk_delete_confirm')
-        self.delete_url = reverse('tracker:entry_bulk_delete')
-        self.archive_confirm_url = reverse('tracker:entry_bulk_archive_confirm')
-        self.archive_url = reverse('tracker:entry_bulk_archive')
-        self.unarchive_confirm_url = reverse('tracker:entry_bulk_unarchive_confirm')
+        self.delete_confirm_url = reverse('workspaces:entry_bulk_delete_confirm')
+        self.delete_url = reverse('workspaces:entry_bulk_delete')
+        self.archive_confirm_url = reverse('workspaces:entry_bulk_archive_confirm')
+        self.archive_url = reverse('workspaces:entry_bulk_archive')
+        self.unarchive_confirm_url = reverse('workspaces:entry_bulk_unarchive_confirm')
 
     def test_bulk_delete_confirm_view(self):
         response = self.client.post(self.delete_confirm_url, {'selected_entries': [self.entry1.pk, self.entry2.pk]})
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'tracker/timeentry_confirm_delete.html')
+        self.assertTemplateUsed(response, 'workspaces/timeentry_confirm_delete.html')
         self.assertContains(response, 'Bulk Entry 1')
         self.assertContains(response, 'Bulk Entry 2')
 
     def test_bulk_delete_action(self):
         self.assertEqual(TimeEntry.objects.count(), 3)
         response = self.client.post(self.delete_url, {'selected_entries': [self.entry1.pk, self.entry2.pk]})
-        self.assertRedirects(response, reverse('tracker:entry_list'))
+        self.assertRedirects(response, reverse('workspaces:entry_list'))
         self.assertEqual(TimeEntry.objects.count(), 1)
 
     def test_bulk_delete_with_preserved_filters(self):
@@ -821,22 +840,22 @@ class BulkActionViewsTest(TestCase):
             'selected_entries': [self.entry1.pk],
             'preserved_filters': filters
         })
-        expected_url = f"{reverse('tracker:entry_list')}?{filters}"
+        expected_url = f"{reverse('workspaces:entry_list')}?{filters}"
         self.assertRedirects(response, expected_url)
 
     def test_bulk_delete_get_request(self):
         response = self.client.get(self.delete_url)
-        self.assertRedirects(response, reverse('tracker:entry_list'))
+        self.assertRedirects(response, reverse('workspaces:entry_list'))
 
     def test_bulk_archive_confirm_view(self):
         response = self.client.post(self.archive_confirm_url, {'selected_entries': [self.entry1.pk]})
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'tracker/timeentry_confirm_archive.html')
+        self.assertTemplateUsed(response, 'workspaces/timeentry_confirm_archive.html')
         self.assertContains(response, 'Bulk Entry 1')
 
     def test_bulk_archive_action(self):
         response = self.client.post(self.archive_url, {'selected_entries': [self.entry1.pk], 'action': 'archive'})
-        self.assertRedirects(response, reverse('tracker:entry_list'))
+        self.assertRedirects(response, reverse('workspaces:entry_list'))
         self.entry1.refresh_from_db()
         self.assertTrue(self.entry1.is_archived)
 
@@ -847,39 +866,39 @@ class BulkActionViewsTest(TestCase):
             'action': 'archive',
             'preserved_filters': filters
         })
-        expected_url = f"{reverse('tracker:entry_list')}?{filters}"
+        expected_url = f"{reverse('workspaces:entry_list')}?{filters}"
         self.assertRedirects(response, expected_url)
 
     def test_bulk_archive_get_request(self):
         response = self.client.get(self.archive_url)
-        self.assertRedirects(response, reverse('tracker:entry_list'))
+        self.assertRedirects(response, reverse('workspaces:entry_list'))
 
     def test_bulk_unarchive_confirm_view(self):
         response = self.client.post(self.unarchive_confirm_url, {'selected_entries': [self.entry3.pk]})
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'tracker/timeentry_confirm_unarchive.html')
+        self.assertTemplateUsed(response, 'workspaces/timeentry_confirm_unarchive.html')
         self.assertContains(response, 'Bulk Entry 3')
 
     def test_bulk_unarchive_action(self):
         response = self.client.post(self.archive_url, {'selected_entries': [self.entry3.pk], 'action': 'unarchive'})
-        self.assertRedirects(response, reverse('tracker:entry_list'))
+        self.assertRedirects(response, reverse('workspaces:entry_list'))
         self.entry3.refresh_from_db()
         self.assertFalse(self.entry3.is_archived)
 
     def test_toggle_archive(self):
-        toggle_url = reverse('tracker:entry_toggle_archive', kwargs={'pk': self.entry1.pk})
+        toggle_url = reverse('workspaces:entry_toggle_archive', kwargs={'pk': self.entry1.pk})
         # This action should be a POST request to be safe
         response = self.client.post(toggle_url)
-        self.assertRedirects(response, reverse('tracker:entry_list'))
+        self.assertRedirects(response, reverse('workspaces:entry_list'))
         self.entry1.refresh_from_db()
         self.assertTrue(self.entry1.is_archived)
 
     def test_toggle_archive_get_request(self):
         """Test that a GET request to toggle archive redirects without action."""
-        toggle_url = reverse('tracker:entry_toggle_archive', kwargs={'pk': self.entry1.pk})
+        toggle_url = reverse('workspaces:entry_toggle_archive', kwargs={'pk': self.entry1.pk})
         self.assertFalse(self.entry1.is_archived)
         response = self.client.get(toggle_url)
-        self.assertRedirects(response, reverse('tracker:entry_list'))
+        self.assertRedirects(response, reverse('workspaces:entry_list'))
         self.entry1.refresh_from_db()
         self.assertFalse(self.entry1.is_archived)
 
@@ -902,25 +921,25 @@ class ProjectActionViewsTest(TestCase):
             start_time=timezone.now(),
             end_time=timezone.now()
         )
-        self.toggle_archive_url = reverse('tracker:project_toggle_archive', kwargs={'pk': self.project.pk})
+        self.toggle_archive_url = reverse('workspaces:project_toggle_archive', kwargs={'pk': self.project.pk})
 
     def test_project_archive_and_unarchive_confirm_views(self):
         """Test that the project archive/unarchive confirmation pages load."""
-        archive_confirm_url = reverse('tracker:project_archive_confirm', kwargs={'pk': self.project.pk})
+        archive_confirm_url = reverse('workspaces:project_archive_confirm', kwargs={'pk': self.project.pk})
         response = self.client.get(archive_confirm_url)
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'tracker/project_confirm_archive.html')
+        self.assertTemplateUsed(response, 'workspaces/project_confirm_archive.html')
 
-        unarchive_confirm_url = reverse('tracker:project_unarchive_confirm', kwargs={'pk': self.project.pk})
+        unarchive_confirm_url = reverse('workspaces:project_unarchive_confirm', kwargs={'pk': self.project.pk})
         response = self.client.get(unarchive_confirm_url)
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'tracker/project_confirm_unarchive.html')
+        self.assertTemplateUsed(response, 'workspaces/project_confirm_unarchive.html')
 
     def test_project_toggle_archive_get_redirects(self):
         """Test that a GET request to the toggle archive URL redirects without action."""
         self.assertFalse(self.project.is_archived)
         response = self.client.get(self.toggle_archive_url)
-        self.assertRedirects(response, reverse('tracker:project_list'))
+        self.assertRedirects(response, reverse('workspaces:project_list'))
         self.project.refresh_from_db()
         self.assertFalse(self.project.is_archived)
 
@@ -930,7 +949,7 @@ class ProjectActionViewsTest(TestCase):
 
         # Archive project and its entries
         response = self.client.post(self.toggle_archive_url, {'archive_entries': 'on'})
-        self.assertRedirects(response, reverse('tracker:project_list'))
+        self.assertRedirects(response, reverse('workspaces:project_list'))
 
         self.project.refresh_from_db()
         self.entry1.refresh_from_db()
@@ -945,7 +964,7 @@ class ProjectActionViewsTest(TestCase):
 
         # Unarchive project and its entries
         response = self.client.post(self.toggle_archive_url, {'unarchive_entries': 'on'})
-        self.assertRedirects(response, reverse('tracker:project_list'))
+        self.assertRedirects(response, reverse('workspaces:project_list'))
 
         self.project.refresh_from_db()
         self.entry1.refresh_from_db()
@@ -958,7 +977,7 @@ class ProjectActionViewsTest(TestCase):
 
         # Archive project WITHOUT cascading
         response = self.client.post(self.toggle_archive_url) # No 'archive_entries' in POST data
-        self.assertRedirects(response, reverse('tracker:project_list'))
+        self.assertRedirects(response, reverse('workspaces:project_list'))
 
         self.project.refresh_from_db()
         self.entry1.refresh_from_db()
@@ -1126,7 +1145,7 @@ class AnalyticsDashboardViewTest(TestCase):
 
 class CustomSocialAccountAdapterTest(TestCase):
     def setUp(self):
-        from .adapters import CustomSocialAccountAdapter
+        from tracker.adapters import CustomSocialAccountAdapter
         self.adapter = CustomSocialAccountAdapter()
 
     def test_pre_social_login_new_user_from_email(self):
@@ -1526,7 +1545,7 @@ class FormTests(TestCase):
         self.project_personal = Project.objects.create(user=self.user, name='Personal Form Project', category='personal')
 
     def test_time_entry_manual_form_init_with_pause(self):
-        from .forms import TimeEntryManualForm
+        from workspaces.forms import TimeEntryManualForm
         entry = TimeEntry.objects.create(
             user=self.user,
             title='Paused Entry',
@@ -1540,7 +1559,7 @@ class FormTests(TestCase):
         self.assertEqual(form.fields['pause_seconds'].initial, 10)
 
     def test_time_entry_manual_form_invalid_pause_duration(self):
-        from .forms import TimeEntryManualForm
+        from workspaces.forms import TimeEntryManualForm
         form_data = {
             'title': 'Invalid Pause',
             'start_time': timezone.now(),
@@ -1554,7 +1573,7 @@ class FormTests(TestCase):
         self.assertIn('Paused duration cannot be greater than the total entry duration.', form.non_field_errors())
 
     def test_time_entry_manual_form_invalid_end_time(self):
-        from .forms import TimeEntryManualForm
+        from workspaces.forms import TimeEntryManualForm
         now = timezone.now()
         form_data = {
             'title': 'Invalid End Time',
@@ -1590,7 +1609,7 @@ class FormTests(TestCase):
         self.assertEqual(form.fields['project'].queryset.count(), 0)
 
     def test_report_form_dynamic_project_filtering(self):
-        from .forms import ReportForm
+        from tracker.forms import ReportForm
         # Form with 'work' category should only show work projects
         form_data = {'category': 'work'}
         form = ReportForm(data=form_data, user=self.user)
@@ -1599,7 +1618,7 @@ class FormTests(TestCase):
         self.assertNotIn(self.project_personal, project_queryset)
 
     def test_custom_signup_form_save(self):
-        from .forms import CustomSignupForm
+        from users.forms import CustomSignupForm
         form_data = {
             'username': 'newsignup',
             'email': 'newsignup@example.com',
@@ -1629,7 +1648,7 @@ class MiddlewareTest(TestCase):
     @patch('tracker.middleware.ZoneInfo')
     @patch('tracker.middleware.timezone')
     def test_timezone_middleware_valid_cookie(self, mock_timezone, mock_zoneinfo):
-        from .middleware import TimezoneMiddleware
+        from tracker.middleware import TimezoneMiddleware
         middleware = TimezoneMiddleware(get_response=lambda r: None)
         request = MagicMock()
         request.COOKIES = {'timezone': 'Europe/Stockholm'}
@@ -1642,7 +1661,7 @@ class MiddlewareTest(TestCase):
     @patch('tracker.middleware.ZoneInfo')
     @patch('tracker.middleware.timezone')
     def test_timezone_middleware_invalid_cookie(self, mock_timezone, mock_zoneinfo):
-        from .middleware import TimezoneMiddleware, ZoneInfoNotFoundError
+        from tracker.middleware import TimezoneMiddleware, ZoneInfoNotFoundError
         middleware = TimezoneMiddleware(get_response=lambda r: None)
         request = MagicMock()
         request.COOKIES = {'timezone': 'Invalid/Timezone'}
@@ -1690,7 +1709,7 @@ class ModelTests(TestCase):
     def test_profile_is_created_for_new_user(self):
         """Test the post_save signal for creating a Profile."""
         self.assertTrue(hasattr(self.user, 'profile'))
-        self.assertIsInstance(self.user.profile, Profile)
+        self.assertIsInstance(self.user.profile, CustomUser)
 
     def test_profile_save_signal_on_user_update(self):
         """Test that the user's profile is saved when the user is updated."""
@@ -1717,9 +1736,107 @@ class ProjectUpdateViewTest(TestCase):
         self.user = get_user_model().objects.create_user(username='testuser', password='testpassword')
         self.client.login(username='testuser', password='testpassword')
         self.project = Project.objects.create(user=self.user, name='Original Name')
-        self.url = reverse('tracker:project_update', kwargs={'pk': self.project.pk})
+        self.url = reverse('workspaces:project_update', kwargs={'pk': self.project.pk})
 
     def test_update_view_loads(self):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(response, 'tracker/project_form.html')
+        self.assertTemplateUsed(response, 'workspaces/project_form.html')
+
+class ViewsFunctionsTest(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='testuser', password='password')
+        self.project = Project.objects.create(user=self.user, name='Test Project', category='work', hourly_rate=100)
+        self.time_entry = TimeEntry.objects.create(
+            user=self.user,
+            project=self.project,
+            title='Test Entry',
+            start_time=timezone.now() - timedelta(hours=1),
+            end_time=timezone.now(),
+            category='work'
+        )
+
+    def test_get_date_range(self):
+        start_date, end_date, days_in_period = _get_date_range('7d')
+        self.assertEqual(days_in_period, 7)
+        self.assertTrue(end_date > start_date)
+
+    def test_get_base_queryset(self):
+        start_date = timezone.now() - timedelta(days=1)
+        queryset = _get_base_queryset(self.user, start_date, 'work')
+        self.assertEqual(queryset.count(), 1)
+        self.assertEqual(queryset.first(), self.time_entry)
+
+    def test_calculate_summary_data(self):
+        start_date = timezone.now() - timedelta(days=1)
+        work_duration, personal_duration, total_earnings = _calculate_summary_data(self.user, start_date)
+        self.assertAlmostEqual(work_duration.total_seconds(), 3600, delta=10)
+        self.assertEqual(personal_duration.total_seconds(), 0)
+        self.assertAlmostEqual(total_earnings, 100, delta=1)
+
+    @patch('tracker.views._calculate_activity_by_project')
+    @patch('tracker.views._get_bar_chart_data')
+    @patch('tracker.views._get_doughnut_chart_data')
+    def test_get_context_data(self, mock_doughnut, mock_bar, mock_activity):
+        mock_doughnut.return_value = (['work'], [1])
+        mock_bar.return_value = (['Test Project'], [100])
+        mock_activity.return_value = (['2023-01-01'], [{'label': 'Test Project', 'data': [1]}])
+        
+        start_date = timezone.now() - timedelta(days=1)
+        queryset = _get_base_queryset(self.user, start_date, 'work')
+        context = _get_context_data(self.user, start_date, '7d', 'work', queryset)
+        
+        self.assertIn('work_duration', context)
+        self.assertIn('personal_duration', context)
+        self.assertIn('total_earnings', context)
+        self.assertIn('category_chart_labels', context)
+        self.assertIn('earnings_chart_labels', context)
+        self.assertIn('activity_chart_labels', context)
+
+    @patch('tracker.views.Translator')
+    def test_get_translation_context(self, MockTranslator):
+        mock_translator_instance = MockTranslator.return_value
+        mock_translator_instance.translate.side_effect = lambda text, **kwargs: f"Translated {text}"
+        
+        context = _get_translation_context(mock_translator_instance, 'es')
+        self.assertEqual(context['t_translated_report'], 'Translated Translated Report')
+
+    @patch('tracker.views.Translator')
+    def test_get_translated_entries(self, MockTranslator):
+        mock_translator_instance = MockTranslator.return_value
+        mock_translator_instance.translate.side_effect = lambda text, **kwargs: f"Translated {text}"
+        
+        entries = [self.time_entry]
+        translated_entries = _get_translated_entries(entries, mock_translator_instance, 'es')
+        
+        self.assertEqual(len(translated_entries), 1)
+        self.assertEqual(translated_entries[0]['title'], 'Translated Test Entry')
+
+    @patch('tracker.views.render_to_pdf')
+    def test_generate_translated_pdf_response(self, mock_render_to_pdf):
+        mock_render_to_pdf.return_value = b'pdf content'
+        context = {
+            'trans': {'t_translated_report': 'Translated Report'},
+            'entries': [],
+            'project': self.project,
+            'start_date': '2023-01-01',
+            'end_date': '2023-01-31',
+            'target_language_english_name': 'Spanish',
+            'translated_language_name': 'Español',
+            'is_rtl': False,
+        }
+        response = _generate_translated_pdf_response(context, '2023-01-01', '2023-01-31')
+        self.assertIsInstance(response, HttpResponse)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+
+    def test_generate_translated_csv_response(self):
+        translated_entries = [{
+            'original': self.time_entry,
+            'title': 'Translated Title',
+            'description': 'Translated Description',
+            'notes': 'Translated Notes',
+        }]
+        response = _generate_translated_csv_response(translated_entries, '2023-01-01', '2023-01-31')
+        self.assertIsInstance(response, HttpResponse)
+        self.assertEqual(response['Content-Type'], 'text/csv')
+        self.assertIn(b'Translated Title', response.content)

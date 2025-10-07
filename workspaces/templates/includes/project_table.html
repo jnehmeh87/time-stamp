@@ -1,0 +1,32 @@
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Hourly Rate</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for project in projects %}
+            <tr>
+                <td>{{ project.name }}</td>
+                <td>{{ project.description|truncatewords:10 }}</td>
+                <td>${{ project.hourly_rate }}</td>
+                <td>
+                    <a href="{% url 'workspaces:project_update' project.pk %}" class="btn btn-sm btn-info">Edit</a>
+                    <a href="{% url 'workspaces:project_delete' project.pk %}" class="btn btn-sm btn-danger">Delete</a>
+                    {% if project.is_archived %}
+                        <a href="{% url 'workspaces:project_unarchive_confirm' project.pk %}" class.py="btn btn-sm btn-secondary">Unarchive</a>
+                    {% else %}
+                        <a href="{% url 'workspaces:project_archive_confirm' project.pk %}" class="btn btn-sm btn-secondary">Archive</a>
+                    {% endif %}
+                </td>
+            </tr>
+        {% empty %}
+            <tr>
+                <td colspan="4">No {{ category_name }} projects found.</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>

@@ -1,15 +1,14 @@
 {% extends "base.html" %}
 {% load crispy_forms_tags %}
-{% load static %}
 
-{% block title %}{% if object %}Edit Time Entry{% else %}New Manual Entry{% endif %}{% endblock %}
+{% block title %}New Manual Entry{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-8">
         <div class="card">
             <div class="card-header">
-                <h3>{% if object %}Edit Time Entry{% else %}New Manual Entry{% endif %}</h3>
+                <h3>New Manual Entry</h3>
             </div>
             <div class="card-body">
                 <form method="post" enctype="multipart/form-data">
@@ -28,22 +27,8 @@
 
                     <hr>
 
-                    <!-- Time Details Section -->
-                    {% if object %}
-                    <div id="time-details-display">
+                    <div id="time-details-edit">
                         <h5>Time Details</h5>
-                        <p>
-                            <strong>Date:</strong> {{ object.start_time|date:"M j, Y" }}<br>
-                            <strong>Start Time:</strong> {{ object.start_time|date:"g:i A" }}<br>
-                            <strong>End Time:</strong> {{ object.end_time|date:"g:i A" }}<br>
-                            <strong>Pause:</strong> {{ object.paused_duration }}
-                        </p>
-                        <button type="button" id="edit-time-btn" class="btn btn-secondary btn-sm mb-3">Edit Time Details</button>
-                    </div>
-                    {% endif %}
-
-                    <div id="time-details-edit" class="{% if object %}d-none{% endif %}">
-                        <h5>{% if object %}Edit Time Details{% else %}Time Details{% endif %}</h5>
                         <div class="row">
                             <div class="col-md-6 mb-3">
                                 {{ form.start_time|as_crispy_field }}
@@ -64,8 +49,6 @@
                             </div>
                         </div>
                     </div>
-                    <!-- Hidden flag to track if time details were edited -->
-                    <input type="hidden" name="time_details_edited_flag" id="time_details_edited_flag" value="false">
                     
                     <hr>
 
@@ -76,7 +59,7 @@
                         {{ form.notes|as_crispy_field }}
                     </div>
                     <div class="mb-3">
-                        <label for="id_images" class="form-label">Upload New Images</label>
+                        <label for="id_images" class="form-label">Upload Images</label>
                         <input type="file" name="images" class="form-control" multiple id="id_images">
                     </div>
 
@@ -89,8 +72,4 @@
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script src="{% static 'js/timeentry_form.js' %}"></script>
 {% endblock %}

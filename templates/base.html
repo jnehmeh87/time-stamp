@@ -48,10 +48,10 @@
                         <a class="nav-link" href="{% url 'tracker:home' %}"><i class="fas fa-clock me-1"></i>Timer</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'tracker:entry_list' %}">Entries</a>
+                        <a class="nav-link" href="{% url 'workspaces:entry_list' %}">Entries</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'tracker:project_list' %}">Projects</a>
+                        <a class="nav-link" href="{% url 'workspaces:project_list' %}">Projects</a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'tracker:reports' %}">Reports</a>
@@ -97,6 +97,7 @@
       <div>&copy; {% now "Y" %} TimeStamp</div>
       <div>
           <span class="text-secondary">Built for productivity</span>
+          <span class="ms-2">v{{ APP_VERSION }}</span>
       </div>
   </div>
 </footer>
