@@ -17,5 +17,24 @@ steps:
   - 'managed'
   - '--allow-unauthenticated'
   - '--set-secrets=SECRET_KEY=django_secret_key:latest,DATABASE_URL=database_url:latest'
+  - '--memory'
+  - '1Gi'
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: 'bash'
+  args:
+  - '-c'
+  - |
+    gcloud run jobs create timestamp-migrate --image europe-north2-docker.pkg.dev/puncha-mera/timestamp-repo/timestamp-app --command python --args manage.py,migrate --region europe-north2 --set-secrets=SECRET_KEY=django_secret_key:latest,DATABASE_URL=database_url:latest --project=puncha-mera || true
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: gcloud
+  args:
+  - 'run'
+  - 'jobs'
+  - 'execute'
+  - 'timestamp-migrate'
+  - '--region'
+  - 'europe-north2'
+  - '--project'
+  - 'puncha-mera'
 images:
 - 'europe-north2-docker.pkg.dev/puncha-mera/timestamp-repo/timestamp-app'

@@ -241,3 +241,18 @@ class TranslateReportView(LoginRequiredMixin, OrganizationPermissionMixin, View)
             return _generate_translated_csv_response(translated_entries, start_date, end_date)
 
         return render(request, 'reports/report_translated.html', context)
+
+    def post(self, request, *args, **kwargs):
+        text = request.POST.get('text')
+        source_language = request.POST.get('source_language')
+        dest_language = request.POST.get('dest_language')
+
+        if not text or not dest_language:
+            return JsonResponse({'error': 'Missing required parameters.'}, status=400)
+
+        try:
+            translator = Translator()
+            translated_text = translator.translate(text, src=source_language, dest=dest_language).text
+            return JsonResponse({'text': translated_text})
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)

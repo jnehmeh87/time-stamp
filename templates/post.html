@@ -2,13 +2,13 @@
 
 {% block head %}
     {{ super() }}
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/post.css') }}">
+    <link rel="stylesheet" href="{% static 'css/post.css' %}">
 {% endblock %}
 
 {% block app_content %}
     <!-- ...existing code... -->
     <br>
     <button type="button" class="btn btn-primary"
-            onclick="translate('#post{{ post.id }}', '#translation{{ post.id }}', '{{ post.language }}', '{{ g.locale }}', '{{ url_for('static', filename='loading.gif') }}')">{{ _('Translate') }}</button>
+            onclick="translate('{% url 'reports:translate_report' %}', '#post{{ post.id }}', '#translation{{ post.id }}', '{{ post.language }}', '{{ g.locale }}', '{% static 'loading.gif' %}')">{{ _('Translate') }}</button>
     <div id="translation{{ post.id }}"></div>
 {% endblock %}

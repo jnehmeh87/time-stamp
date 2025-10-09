@@ -1,6 +1,6 @@
-function translate(source, dest, source_lang, dest_lang, loading_gif_url) {
+function translate(url, source, dest, source_lang, dest_lang, loading_gif_url) {
     $(dest).html('<img src="' + loading_gif_url + '">');
-    $.post('/translate', {
+    $.post(url, {
         text: $(source).val(),
         source_language: source_lang,
         dest_language: dest_lang

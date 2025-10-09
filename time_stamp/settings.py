@@ -8,7 +8,7 @@ import sys
 import dj_database_url
 from dotenv import load_dotenv
 import io
-from google.cloud import secretmanager
+
 
 # Add this line near the top of your settings.py file
 load_dotenv()
@@ -22,6 +22,7 @@ with open(os.path.join(BASE_DIR, 'VERSION')) as f:
 
 # Fetch secrets from Google Cloud Secret Manager
 try:
+    from google.cloud import secretmanager
     # Create the Secret Manager client.
     client = secretmanager.SecretManagerServiceClient()
 
@@ -52,10 +53,10 @@ except Exception as e:
 # Set DEBUG to False in production by default.
 # It will be True locally if DATABASE_URL is not set, and False otherwise.
 # You can override this by setting the DEBUG environment variable to 'True' or 'False'.
-DEBUG = os.environ.get('DEBUG', str('DATABASE_URL' not in os.environ)) == 'True'
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
  
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'timestamp-trackr-68fdb365e285.herokuapp.com']
-CSRF_TRUSTED_ORIGINS = ['https://timestamp-trackr-68fdb365e285.herokuapp.com']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'timestamp-trackr-68fdb365e285.herokuapp.com', 'timestamp-app-258177020667.europe-north2.run.app']
+CSRF_TRUSTED_ORIGINS = ['https://timestamp-trackr-68fdb365e285.herokuapp.com', 'https://timestamp-app-258177020667.europe-north2.run.app']
 
 
 # Application definition
